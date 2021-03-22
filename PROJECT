@@ -1,0 +1,4 @@
+domain: tencentcloud.kubecooler.com
+multigroup: true
+repo: tencent-cloud-operator
+version: "2"
