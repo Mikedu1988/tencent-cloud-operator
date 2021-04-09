@@ -1,0 +1,90 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: vpcs.network.tencentcloud.kubecooler.com
+spec:
+  group: network.tencentcloud.kubecooler.com
+  names:
+    kind: Vpc
+    listKind: VpcList
+    plural: vpcs
+    singular: vpc
+  scope: Namespaced
+  validation:
+    openAPIV3Schema:
+      description: Vpc is the Schema for the vpcs API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: VpcSpec defines the desired state of Vpc
+          properties:
+            cidrBlock:
+              description: 'vpc cidr，only have three valid range: 10.0.0.0/16，172.16.0.0/16，192.168.0.0/16'
+              type: string
+            dnsServers:
+              description: DnsServers address, support up to 4 dns servers。
+              items:
+                type: string
+              type: array
+            domainName:
+              description: DomainName。
+              type: string
+            enableMulticast:
+              description: Multicast, true or false
+              type: string
+            region:
+              description: Region to create the vpc
+              type: string
+            tags:
+              description: 'Tags：[{"Key": "city", "Value": "shanghai"}]。'
+              items:
+                properties:
+                  key:
+                    type: string
+                  value:
+                    type: string
+                type: object
+              type: array
+            vpcName:
+              description: VpcName name of the vpc
+              type: string
+          type: object
+        status:
+          description: VpcStatus defines the observed state of Vpc
+          properties:
+            status:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              type: string
+            vpc_id:
+              type: string
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []
