@@ -1,0 +1,12 @@
+apiVersion: network.tencentcloud.kubecooler.com/v1alpha1
+kind: SecurityGroup
+metadata:
+  name: securitygroup-duliyang-1
+spec:
+  # Add fields here
+  region: ap-shanghai
+  groupName: securitygroup-duliyang-1
+  groupDescription: securitygroup-duliyang-1-desc
+  tags:
+    - key: tag1
+      value: value1

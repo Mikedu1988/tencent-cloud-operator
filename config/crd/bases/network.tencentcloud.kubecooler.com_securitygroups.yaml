@@ -6,18 +6,18 @@ metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
   creationTimestamp: null
-  name: vpcs.network.tencentcloud.kubecooler.com
+  name: securitygroups.network.tencentcloud.kubecooler.com
 spec:
   group: network.tencentcloud.kubecooler.com
   names:
-    kind: Vpc
-    listKind: VpcList
-    plural: vpcs
-    singular: vpc
+    kind: SecurityGroup
+    listKind: SecurityGroupList
+    plural: securitygroups
+    singular: securitygroup
   scope: Namespaced
   validation:
     openAPIV3Schema:
-      description: Vpc is the Schema for the vpcs API
+      description: SecurityGroup is the Schema for the securitygroups API
       properties:
         apiVersion:
           description: 'APIVersion defines the versioned schema of this representation
@@ -32,27 +32,17 @@ spec:
         metadata:
           type: object
         spec:
-          description: VpcSpec defines the desired state of Vpc
+          description: SecurityGroupSpec defines the desired state of SecurityGroup
           properties:
-            cidrBlock:
-              description: 'vpc cidr，only have three valid range: 10.0.0.0/16，172.16.0.0/16，192.168.0.0/16'
+            groupDescription:
               type: string
-            dnsServers:
-              description: DnsServers address, support up to 4 dns servers。
-              items:
-                type: string
-              type: array
-            domainName:
-              description: DomainName。
-              type: string
-            enableMulticast:
-              description: Multicast, true or false
+            groupName:
               type: string
             region:
-              description: Region to create the vpc
+              description: Foo is an example field of SecurityGroup. Edit SecurityGroup_types.go
+                to remove/update
               type: string
             tags:
-              description: 'Tags：[{"Key": "city", "Value": "shanghai"}]。'
               items:
                 properties:
                   key:
@@ -61,12 +51,9 @@ spec:
                     type: string
                 type: object
               type: array
-            vpcName:
-              description: VpcName name of the vpc
-              type: string
           type: object
         status:
-          description: VpcStatus defines the observed state of Vpc
+          description: SecurityGroupStatus defines the observed state of SecurityGroup
           properties:
             code:
               type: string
@@ -76,12 +63,12 @@ spec:
               type: string
             retryCount:
               type: integer
+            securityGroupId:
+              type: string
             status:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
                 this file'
-              type: string
-            vpc_id:
               type: string
           type: object
       type: object

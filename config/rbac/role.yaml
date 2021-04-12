@@ -9,6 +9,46 @@ rules:
 - apiGroups:
   - network.tencentcloud.kubecooler.com
   resources:
+  - securitygroups
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - network.tencentcloud.kubecooler.com
+  resources:
+  - securitygroups/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - network.tencentcloud.kubecooler.com
+  resources:
+  - subnets
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - network.tencentcloud.kubecooler.com
+  resources:
+  - subnets/status
+  verbs:
+  - get
+  - patch
+  - update
+- apiGroups:
+  - network.tencentcloud.kubecooler.com
+  resources:
   - vpcs
   verbs:
   - create

@@ -23,22 +23,25 @@ import (
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-// VpcSpec defines the desired state of Vpc
-type VpcSpec struct {
+// SubnetSpec defines the desired state of Subnet
+type SubnetSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 
-	// VpcName name of the vpc
-	VpcName *string `json:"vpcName,omitempty"`
+	//VpcRef to get the vpc Id, this will be ignored when vpcId is not empty
+	VpcRef *VpcRef `json:"vpcRef,omitempty"`
 
-	// vpc cidr，only have three valid range: 10.0.0.0/16，172.16.0.0/16，192.168.0.0/16
+	//VpcId to create the subnet
+	VpcId *string `json:"vpcId,omitempty"`
+
+	// Subnet Name name of the vpc
+	SubnetName *string `json:"subnetName,omitempty"`
+
+	// Subnet cidr，only have three valid range: 10.0.0.0/16，172.16.0.0/16，192.168.0.0/16
 	CidrBlock *string `json:"cidrBlock,omitempty"`
 
-	// Multicast, true or false
-	EnableMulticast *string `json:"enableMulticast,omitempty"`
-
-	// DnsServers address, support up to 4 dns servers。
-	DnsServers []*string `json:"dnsServers,omitempty"`
+	// Zone, true or false
+	Zone *string `json:"zone,omitempty"`
 
 	// DomainName。
 	DomainName *string `json:"domainName,omitempty"`
@@ -50,43 +53,44 @@ type VpcSpec struct {
 	Tags []Tag `json:"tags,omitempty"`
 }
 
-type Tag struct {
-	Key   *string `json:"key,omitempty"`
-	Value *string `json:"value,omitempty"`
+type VpcRef struct {
+	//The name to refer from, we don't allow to ref from another namespace
+	Name *string `json:"name,omitempty"`
 }
 
-// VpcStatus defines the observed state of Vpc
-type VpcStatus struct {
+// SubnetStatus defines the observed state of Subnet
+type SubnetStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
-	Status     *string `json:"status,omitempty"`
-	Reason     *string `json:"reason,omitempty"`
-	Code       *string `json:"code,omitempty"`
-	LastRetry  *string `json:"lastRetry,omitempty"`
-	RetryCount *int    `json:"retryCount,omitempty"`
-	VpcId      *string `json:"vpc_id,omitempty"`
+	Status     *string    `json:"status,omitempty"`
+	Reason     *string    `json:"reason,omitempty"`
+	SubnetId   *string    `json:"subnetId,omitempty"`
+	Code       *string    `json:"code,omitempty"`
+	LastRetry  *string    `json:"lastRetry,omitempty"`
+	RetryCount *int       `json:"retryCount,omitempty"`
+	Vpc        *VpcStatus `json:"vpc,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// Vpc is the Schema for the vpcs API
-type Vpc struct {
+// Subnet is the Schema for the subnets API
+type Subnet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   VpcSpec   `json:"spec,omitempty"`
-	Status VpcStatus `json:"status,omitempty"`
+	Spec   SubnetSpec   `json:"spec,omitempty"`
+	Status SubnetStatus `json:"status,omitempty"`
 }
 
 // +kubebuilder:object:root=true
 
-// VpcList contains a list of Vpc
-type VpcList struct {
+// SubnetList contains a list of Subnet
+type SubnetList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
-	Items           []Vpc `json:"items"`
+	Items           []Subnet `json:"items"`
 }
 
 func init() {
-	SchemeBuilder.Register(&Vpc{}, &VpcList{})
+	SchemeBuilder.Register(&Subnet{}, &SubnetList{})
 }

@@ -4,7 +4,7 @@ metadata:
   name: vpc-duliyang
 spec:
   # Add fields here
-  vpcName: 'vpc-duliyang'
+  vpcName: 'vpc-duliyang-test'
   cidrBlock: '10.0.0.0/16'
   enableMulticast: 'false'
   region: 'ap-shanghai'

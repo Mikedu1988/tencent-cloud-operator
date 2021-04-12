@@ -1,0 +1,24 @@
+---
+apiVersion: network.tencentcloud.kubecooler.com/v1alpha1
+kind: Subnet
+metadata:
+  name: subnet-duliyang-1
+spec:
+  subnetName: subnet-duliyang-1
+  cidrBlock: 10.0.0.0/22
+  vpcRef:
+    name: vpc-duliyang
+  zone: ap-shanghai-1
+  region: ap-shanghai
+#---
+#apiVersion: network.tencentcloud.kubecooler.com/v1alpha1
+#kind: Subnet
+#metadata:
+#  name: subnet-duliyang-2
+#spec:
+#  subnetName: subnet-duliyang-2
+#  cidrBlock: 10.0.4.0/22
+#  zone: ap-shanghai-2
+#  region: ap-shanghai
+#  vpcRef:
+#    name: vpc-duliyang

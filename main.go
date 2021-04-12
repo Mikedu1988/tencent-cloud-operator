@@ -74,16 +74,24 @@ func main() {
 		setupLog.Error(err, "unable to create controller", "controller", "Vpc")
 		os.Exit(1)
 	}
-	if err = (&networkv1alpha1.Vpc{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Vpc")
+	//if err = (&networkv1alpha1.Vpc{}).SetupWebhookWithManager(mgr); err != nil {
+	//	setupLog.Error(err, "unable to create webhook", "webhook", "Vpc")
+	//	os.Exit(1)
+	//}
+	if err = (&networkcontroller.SubnetReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("Subnet"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "Subnet")
 		os.Exit(1)
 	}
-	if err = (&networkv1alpha1.Vpc{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Vpc")
-		os.Exit(1)
-	}
-	if err = (&networkv1alpha1.Vpc{}).SetupWebhookWithManager(mgr); err != nil {
-		setupLog.Error(err, "unable to create webhook", "webhook", "Vpc")
+	if err = (&networkcontroller.SecurityGroupReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("SecurityGroup"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "SecurityGroup")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

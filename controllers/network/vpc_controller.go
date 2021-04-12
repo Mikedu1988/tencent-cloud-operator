@@ -18,7 +18,7 @@ package controllers
 
 import (
 	"context"
-	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -26,6 +26,7 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
+	"tencent-cloud-operator/internal/tencent/common"
 	"time"
 
 	"github.com/go-logr/logr"
@@ -68,75 +69,115 @@ func (r *VpcReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	if vpc.Status.Status == nil {
 		vpc.Status.Status = new(string)
 	}
-
+	if vpc.Status.LastRetry == nil {
+		vpc.Status.LastRetry = new(string)
+	}
+	if vpc.Status.Reason == nil {
+		vpc.Status.Reason = new(string)
+	}
+	if vpc.Status.RetryCount == nil {
+		vpc.Status.RetryCount = new(int)
+	}
+	if vpc.Status.Code == nil {
+		vpc.Status.Code = new(string)
+	}
 	err = r.vpcReconcile(vpc)
 	if err != nil {
-		patch := client.MergeFrom(vpc.DeepCopy())
-		vpc.Status.Status = new(string)
 		*vpc.Status.Status = "ERROR"
-		r.Patch(context.TODO(), vpc, patch)
-		return ctrl.Result{RequeueAfter: 5 * time.Second}, err
+		*vpc.Status.LastRetry = time.Now().Format("2006-01-02T15:04:05")
+		*vpc.Status.RetryCount += 1
+		if cloudError, ok := err.(*tcerrors.TencentCloudSDKError); ok {
+			*vpc.Status.Code = cloudError.Code
+			*vpc.Status.Reason = cloudError.Message
+		}
+		r.Update(context.TODO(), vpc)
+		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 	}
-
-	return ctrl.Result{}, nil
+	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 }
 
 func (r *VpcReconciler) vpcReconcile(vpc *networkv1alpha1.Vpc) error {
-	credential := common.NewCredential(
-		"AKIDeNGBtPSsmpgFag6GzTivunR0LTO4fryq",
-		"6wa4Rnu52lHSRE2eP2WsqkS0GaklZCpO",
-	)
-	tencent_client, _ := tcvpc.NewClient(credential, *vpc.Spec.Region, profile.NewClientProfile())
 	if *vpc.Status.Status == "" || vpc.Status.Status == nil {
 		*vpc.Status.Status = "PROCESSING"
 		r.Update(context.TODO(), vpc)
-		request := tcvpc.NewCreateVpcRequest()
-		request.VpcName = vpc.Spec.VpcName
-		request.CidrBlock = vpc.Spec.CidrBlock
-		request.EnableMulticast = vpc.Spec.EnableMulticast
-		request.DnsServers = vpc.Spec.DnsServers
-		request.DomainName = vpc.Spec.DomainName
-		for _, tag := range vpc.Spec.Tags {
-			log.Printf("tag key:%s, tag value: %s", *tag.Key, *tag.Value)
-			request.Tags = append(request.Tags, &tcvpc.Tag{
-				Key:   tag.Key,
-				Value: tag.Value,
-			})
-		}
-		log.Println("request:", request.ToJsonString())
-		resp, err := tencent_client.CreateVpc(request)
-		if err != nil {
-			log.Println("error create tencent cloud vpc, err:", err)
-			return err
-		}
-		vpc.Status.VpcId = resp.Response.Vpc.VpcId
-		*vpc.Status.Status = "CREATED"
-		err = r.Update(context.TODO(), vpc)
-		if err != nil {
-			log.Println("error update vpc status")
-			return err
-		}
+		return r.createVpc(vpc)
 	} else if *vpc.Status.Status == "PROCESSING" {
 		log.Printf("vpc %s is in PROCESSING status, ignore", *vpc.Spec.VpcName)
-	} else if *vpc.Status.Status == "CREATED" {
-		log.Printf("vpc %s is in CREATED status", *vpc.Spec.VpcName)
-		request := tcvpc.NewDescribeVpcsRequest()
-		request.VpcIds = append(request.VpcIds, vpc.Status.VpcId)
-		resp, err := tencent_client.DescribeVpcs(request)
-		if err != nil {
-			log.Println("failed to get vpc from tencent cloud, requeue")
-			return err
-		}
-		if *resp.Response.TotalCount == 0 {
-			log.Println("Resource is deleted from cloud, update status")
-			//patch := client.MergeFrom(vpc)
-			*vpc.Status.Status = "DELETED_IN_CLOUD"
-			err := r.Update(context.Background(), vpc)
-			if err != nil {
-				log.Println("error update DELETED_IN_CLOUD")
+	} else if *vpc.Status.Status == "ERROR" {
+		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *vpc.Status.LastRetry)
+		//only retry 10 times, only retry every 1 minute
+		if *vpc.Status.RetryCount < 10 && time.Now().Sub(lastRetried) > time.Minute {
+			if vpc.Status.VpcId == nil || *vpc.Status.VpcId == "" {
+				return r.createVpc(vpc)
+			} else {
+				return r.checkVpcStatus(vpc)
 			}
 		}
+		log.Println("not retrying for vpc:", *vpc.Spec.VpcName)
+	} else if *vpc.Status.Status == "READY" {
+		log.Printf("vpc %s is in READY status, check the status from tencnet cloud", *vpc.Spec.VpcName)
+		return r.checkVpcStatus(vpc)
 	}
+	return nil
+}
+
+func (r *VpcReconciler) createVpc(vpc *networkv1alpha1.Vpc) error {
+	tencentClient, _ := tcvpc.NewClient(common.GerCredential(), *vpc.Spec.Region, profile.NewClientProfile())
+	request := tcvpc.NewCreateVpcRequest()
+	request.VpcName = vpc.Spec.VpcName
+	request.CidrBlock = vpc.Spec.CidrBlock
+	request.EnableMulticast = vpc.Spec.EnableMulticast
+	request.DnsServers = vpc.Spec.DnsServers
+	request.DomainName = vpc.Spec.DomainName
+	for _, tag := range vpc.Spec.Tags {
+		log.Printf("tag key:%s, tag value: %s", *tag.Key, *tag.Value)
+		request.Tags = append(request.Tags, &tcvpc.Tag{
+			Key:   tag.Key,
+			Value: tag.Value,
+		})
+	}
+	log.Println("request:", request.ToJsonString())
+	resp, err := tencentClient.CreateVpc(request)
+	if err != nil {
+		log.Println("error create tencent cloud subnet, err:", err)
+		return err
+	}
+	vpc.Status.VpcId = resp.Response.Vpc.VpcId
+	*vpc.Status.Status = "READY"
+	err = r.Update(context.TODO(), vpc)
+	if err != nil {
+		log.Println("error update vpc status")
+		return err
+	}
+	return nil
+}
+
+func (r *VpcReconciler) checkVpcStatus(vpc *networkv1alpha1.Vpc) error {
+	tencentClient, _ := tcvpc.NewClient(common.GerCredential(), *vpc.Spec.Region, profile.NewClientProfile())
+	request := tcvpc.NewDescribeVpcsRequest()
+	request.VpcIds = append(request.VpcIds, vpc.Status.VpcId)
+	resp, err := tencentClient.DescribeVpcs(request)
+	if err != nil {
+		log.Println("failed to get vpc from tencent cloud, requeue")
+		*vpc.Status.RetryCount++
+		*vpc.Status.Reason = err.Error()
+		if *vpc.Status.RetryCount > 10 {
+			return err
+		}
+		return nil
+	}
+	if *resp.Response.TotalCount == 0 {
+		log.Println("Resource is deleted from cloud, update status")
+		*vpc.Status.Status = "DELETED_IN_CLOUD"
+		err := r.Update(context.Background(), vpc)
+		if err != nil {
+			log.Println("error update DELETED_IN_CLOUD")
+		}
+	}
+	*vpc.Status.RetryCount = 0
+	*vpc.Status.LastRetry = ""
+	*vpc.Status.Code = ""
+	*vpc.Status.Reason = ""
 	return nil
 }
 
