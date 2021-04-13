@@ -5,8 +5,76 @@ metadata:
 spec:
   # Add fields here
   region: ap-shanghai
-  groupName: securitygroup-duliyang-1
-  groupDescription: securitygroup-duliyang-1-desc
-  tags:
-    - key: tag1
-      value: value1
+  securityGroup:
+    SecurityGroupName: securitygroup-duliyang-1
+    SecurityGroupDesc: securitygroup-duliyang-1-desc
+    TagSet:
+      - Key: created-by
+        Value: duliyang
+  securityGroupPolicySet:
+    Ingress:
+      - Protocol: TCP
+        Port: '443'
+        CidrBlock: 10.0.0.0/16
+        Action: ACCEPT
+        PolicyDescription: duliyang ingress test policy
+      - Protocol: TCP
+        Port: '443'
+        CidrBlock: 10.1.0.0/16
+        Action: ACCEPT
+        PolicyDescription: duliyang ingress test
+    Egress:
+      - Protocol: TCP
+        Port: all
+        CidrBlock: 10.0.0.0/16
+        Action: ACCEPT
+        PolicyDescription: duliyang egress test policy
+
+#  type SecurityGroupPolicySet struct {
+#
+#  // 安全组规则当前版本。用户每次更新安全规则版本会自动加1，防止更新的路由规则已过期，不填不考虑冲突。
+#  Version *string `json:"Version,omitempty" name:"Version"`
+#
+#  // 出站规则。
+#  Egress []*SecurityGroupPolicy `json:"Egress,omitempty" name:"Egress" list`
+#
+#  // 入站规则。
+#  Ingress []*SecurityGroupPolicy `json:"Ingress,omitempty" name:"Ingress" list`
+#}
+
+#
+#  type SecurityGroupPolicy struct {
+#
+#  // 安全组规则索引号，值会随着安全组规则的变更动态变化。使用PolicyIndex时，请先调用`DescribeSecurityGroupPolicies`获取到规则的PolicyIndex，并且结合返回值中的Version一起使用处理规则。
+#  PolicyIndex *int64 `json:"PolicyIndex,omitempty" name:"PolicyIndex"`
+#
+#// 协议, 取值: TCP,UDP,ICMP,ICMPv6,ALL。
+#  Protocol *string `json:"Protocol,omitempty" name:"Protocol"`
+#
+#  // 端口(all, 离散port,  range)。
+#  Port *string `json:"Port,omitempty" name:"Port"`
+#
+#  // 协议端口ID或者协议端口组ID。ServiceTemplate和Protocol+Port互斥。
+#  ServiceTemplate *ServiceTemplateSpecification `json:"ServiceTemplate,omitempty" name:"ServiceTemplate"`
+#
+#  // 网段或IP(互斥)。
+#  CidrBlock *string `json:"CidrBlock,omitempty" name:"CidrBlock"`
+#
+#  // 网段或IPv6(互斥)。
+#  Ipv6CidrBlock *string `json:"Ipv6CidrBlock,omitempty" name:"Ipv6CidrBlock"`
+#
+#  // 安全组实例ID，例如：sg-ohuuioma。
+#  SecurityGroupId *string `json:"SecurityGroupId,omitempty" name:"SecurityGroupId"`
+#
+#  // IP地址ID或者ID地址组ID。
+#  AddressTemplate *AddressTemplateSpecification `json:"AddressTemplate,omitempty" name:"AddressTemplate"`
+#
+#  // ACCEPT 或 DROP。
+#  Action *string `json:"Action,omitempty" name:"Action"`
+#
+#  // 安全组规则描述。
+#  PolicyDescription *string `json:"PolicyDescription,omitempty" name:"PolicyDescription"`
+#
+#  // 安全组最近修改时间。
+#  ModifyTime *string `json:"ModifyTime,omitempty" name:"ModifyTime"`
+#}

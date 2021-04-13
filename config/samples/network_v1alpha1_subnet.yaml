@@ -4,21 +4,74 @@ kind: Subnet
 metadata:
   name: subnet-duliyang-1
 spec:
-  subnetName: subnet-duliyang-1
-  cidrBlock: 10.0.0.0/22
   vpcRef:
     name: vpc-duliyang
-  zone: ap-shanghai-1
   region: ap-shanghai
-#---
-#apiVersion: network.tencentcloud.kubecooler.com/v1alpha1
-#kind: Subnet
-#metadata:
-#  name: subnet-duliyang-2
-#spec:
-#  subnetName: subnet-duliyang-2
-#  cidrBlock: 10.0.4.0/22
-#  zone: ap-shanghai-2
-#  region: ap-shanghai
-#  vpcRef:
-#    name: vpc-duliyang
+  subnet:
+    SubnetName: duliyang-subnet-new-1
+    CidrBlock: 10.0.0.0/22
+    Zone: ap-shanghai-1
+    TagSet:
+      - Key: created-by
+        Value: duliyang
+
+
+
+#  type SubnetSpec struct {
+#  // INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
+#// Important: Run "make" to regenerate code after modifying this file
+#
+#  //VpcRef to get the vpc Id
+#  VpcRef *VpcRef           `json:"vpcRef,omitempty"`
+#  Region *string           `json:"region,omitempty"`
+#  Subnet *v20170312.Subnet `json:"subnet,omitempty"`
+#}
+
+
+#  type Subnet struct {
+#
+#  // `VPC`实例`ID`。
+#  VpcId *string `json:"VpcId,omitempty" name:"VpcId"`
+#
+#  // 子网实例`ID`，例如：subnet-bthucmmy。
+#  SubnetId *string `json:"SubnetId,omitempty" name:"SubnetId"`
+#
+#  // 子网名称。
+#  SubnetName *string `json:"SubnetName,omitempty" name:"SubnetName"`
+#
+#  // 子网的 `IPv4` `CIDR`。
+#  CidrBlock *string `json:"CidrBlock,omitempty" name:"CidrBlock"`
+#
+#  // 是否默认子网。
+#  IsDefault *bool `json:"IsDefault,omitempty" name:"IsDefault"`
+#
+#  // 是否开启广播。
+#  EnableBroadcast *bool `json:"EnableBroadcast,omitempty" name:"EnableBroadcast"`
+#
+#  // 可用区。
+#  Zone *string `json:"Zone,omitempty" name:"Zone"`
+#
+#  // 路由表实例ID，例如：rtb-l2h8d7c2。
+#  RouteTableId *string `json:"RouteTableId,omitempty" name:"RouteTableId"`
+#
+#  // 创建时间。
+#  CreatedTime *string `json:"CreatedTime,omitempty" name:"CreatedTime"`
+#
+#  // 可用`IPv4`数。
+#  AvailableIpAddressCount *uint64 `json:"AvailableIpAddressCount,omitempty" name:"AvailableIpAddressCount"`
+#
+#  // 子网的 `IPv6` `CIDR`。
+#  Ipv6CidrBlock *string `json:"Ipv6CidrBlock,omitempty" name:"Ipv6CidrBlock"`
+#
+#  // 关联`ACL`ID
+#  NetworkAclId *string `json:"NetworkAclId,omitempty" name:"NetworkAclId"`
+#
+#  // 是否为 `SNAT` 地址池子网。
+#  IsRemoteVpcSnat *bool `json:"IsRemoteVpcSnat,omitempty" name:"IsRemoteVpcSnat"`
+#
+#  // 子网`IPv4`总数。
+#  TotalIpAddressCount *uint64 `json:"TotalIpAddressCount,omitempty" name:"TotalIpAddressCount"`
+#
+#  // 标签键值对。
+#  TagSet []*Tag `json:"TagSet,omitempty" name:"TagSet" list`
+#}

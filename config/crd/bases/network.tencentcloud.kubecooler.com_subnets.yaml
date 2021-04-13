@@ -32,45 +32,77 @@ spec:
         metadata:
           type: object
         spec:
-          description: SubnetSpec defines the desired state of Subnet
+          description: // SubnetSpec defines the desired state of Subnet
           properties:
-            cidrBlock:
-              description: 'Subnet cidr，only have three valid range: 10.0.0.0/16，172.16.0.0/16，192.168.0.0/16'
-              type: string
-            domainName:
-              description: DomainName。
-              type: string
             region:
-              description: Region to create the vpc
               type: string
-            subnetName:
-              description: Subnet Name name of the vpc
-              type: string
-            tags:
-              description: 'Tags：[{"Key": "city", "Value": "shanghai"}]。'
-              items:
-                properties:
-                  key:
-                    type: string
-                  value:
-                    type: string
-                type: object
-              type: array
-            vpcId:
-              description: VpcId to create the subnet
-              type: string
+            subnet:
+              properties:
+                AvailableIpAddressCount:
+                  description: 可用`IPv4`数。
+                  format: int64
+                  type: integer
+                CidrBlock:
+                  description: 子网的 `IPv4` `CIDR`。
+                  type: string
+                CreatedTime:
+                  description: 创建时间。
+                  type: string
+                EnableBroadcast:
+                  description: 是否开启广播。
+                  type: boolean
+                Ipv6CidrBlock:
+                  description: 子网的 `IPv6` `CIDR`。
+                  type: string
+                IsDefault:
+                  description: 是否默认子网。
+                  type: boolean
+                IsRemoteVpcSnat:
+                  description: 是否为 `SNAT` 地址池子网。
+                  type: boolean
+                NetworkAclId:
+                  description: 关联`ACL`ID
+                  type: string
+                RouteTableId:
+                  description: 路由表实例ID，例如：rtb-l2h8d7c2。
+                  type: string
+                SubnetId:
+                  description: 子网实例`ID`，例如：subnet-bthucmmy。
+                  type: string
+                SubnetName:
+                  description: 子网名称。
+                  type: string
+                TagSet:
+                  description: 标签键值对。
+                  items:
+                    properties:
+                      Key:
+                        description: 标签键 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                      Value:
+                        description: 标签值 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                    type: object
+                  type: array
+                TotalIpAddressCount:
+                  description: 子网`IPv4`总数。
+                  format: int64
+                  type: integer
+                VpcId:
+                  description: '`VPC`实例`ID`。'
+                  type: string
+                Zone:
+                  description: 可用区。
+                  type: string
+              type: object
             vpcRef:
-              description: VpcRef to get the vpc Id, this will be ignored when vpcId
-                is not empty
+              description: VpcRef to get the vpc Id
               properties:
                 name:
                   description: The name to refer from, we don't allow to ref from
                     another namespace
                   type: string
               type: object
-            zone:
-              description: Zone, true or false
-              type: string
           type: object
         status:
           description: SubnetStatus defines the observed state of Subnet
@@ -91,22 +123,131 @@ spec:
             subnetId:
               type: string
             vpc:
-              description: VpcStatus defines the observed state of Vpc
               properties:
-                code:
+                AssistantCidrSet:
+                  description: 辅助CIDR 注意：此字段可能返回 null，表示取不到有效值。
+                  items:
+                    properties:
+                      AssistantType:
+                        description: 辅助CIDR类型（0：普通辅助CIDR，1：容器辅助CIDR），默认都是0。
+                        format: int64
+                        type: integer
+                      CidrBlock:
+                        description: 辅助CIDR。形如：`172.16.0.0/16`
+                        type: string
+                      SubnetSet:
+                        description: 辅助CIDR拆分的子网。 注意：此字段可能返回 null，表示取不到有效值。
+                        items:
+                          properties:
+                            AvailableIpAddressCount:
+                              description: 可用`IPv4`数。
+                              format: int64
+                              type: integer
+                            CidrBlock:
+                              description: 子网的 `IPv4` `CIDR`。
+                              type: string
+                            CreatedTime:
+                              description: 创建时间。
+                              type: string
+                            EnableBroadcast:
+                              description: 是否开启广播。
+                              type: boolean
+                            Ipv6CidrBlock:
+                              description: 子网的 `IPv6` `CIDR`。
+                              type: string
+                            IsDefault:
+                              description: 是否默认子网。
+                              type: boolean
+                            IsRemoteVpcSnat:
+                              description: 是否为 `SNAT` 地址池子网。
+                              type: boolean
+                            NetworkAclId:
+                              description: 关联`ACL`ID
+                              type: string
+                            RouteTableId:
+                              description: 路由表实例ID，例如：rtb-l2h8d7c2。
+                              type: string
+                            SubnetId:
+                              description: 子网实例`ID`，例如：subnet-bthucmmy。
+                              type: string
+                            SubnetName:
+                              description: 子网名称。
+                              type: string
+                            TagSet:
+                              description: 标签键值对。
+                              items:
+                                properties:
+                                  Key:
+                                    description: 标签键 注意：此字段可能返回 null，表示取不到有效值。
+                                    type: string
+                                  Value:
+                                    description: 标签值 注意：此字段可能返回 null，表示取不到有效值。
+                                    type: string
+                                type: object
+                              type: array
+                            TotalIpAddressCount:
+                              description: 子网`IPv4`总数。
+                              format: int64
+                              type: integer
+                            VpcId:
+                              description: '`VPC`实例`ID`。'
+                              type: string
+                            Zone:
+                              description: 可用区。
+                              type: string
+                          type: object
+                        type: array
+                      VpcId:
+                        description: '`VPC`实例`ID`。形如：`vpc-6v2ht8q5`'
+                        type: string
+                    type: object
+                  type: array
+                CidrBlock:
+                  description: '`VPC`的`IPv4` `CIDR`。'
                   type: string
-                lastRetry:
+                CreatedTime:
+                  description: 创建时间。
                   type: string
-                reason:
+                DhcpOptionsId:
+                  description: '`DHCP`选项集`ID`。'
                   type: string
-                retryCount:
-                  type: integer
-                status:
-                  description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                    of cluster Important: Run "make" to regenerate code after modifying
-                    this file'
+                DnsServerSet:
+                  description: '`DNS`列表。'
+                  items:
+                    type: string
+                  type: array
+                DomainName:
+                  description: '`DHCP`域名选项值。'
                   type: string
-                vpc_id:
+                EnableDhcp:
+                  description: 是否开启`DHCP`。
+                  type: boolean
+                EnableMulticast:
+                  description: 是否开启组播。
+                  type: boolean
+                Ipv6CidrBlock:
+                  description: '`VPC`的`IPv6` `CIDR`。'
+                  type: string
+                IsDefault:
+                  description: 是否默认`VPC`。
+                  type: boolean
+                TagSet:
+                  description: 标签键值对
+                  items:
+                    properties:
+                      Key:
+                        description: 标签键 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                      Value:
+                        description: 标签值 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                    type: object
+                  type: array
+                VpcId:
+                  description: '`VPC`实例`ID`，例如：vpc-azd4dt1c。'
+                  type: string
+                VpcName:
+                  description: '`VPC`名称。'
                   type: string
               type: object
           type: object

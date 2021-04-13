@@ -65,12 +65,12 @@ func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		return ctrl.Result{}, err
 	}
 
-	log.Println("found the subnet", *subnet.Spec.SubnetName)
+	log.Println("found the subnet", *subnet.Spec.Subnet.SubnetName)
 	if subnet.Status.Status == nil {
 		subnet.Status.Status = new(string)
 	}
 	if subnet.Status.Vpc == nil {
-		subnet.Status.Vpc = new(networkv1alpha1.VpcStatus)
+		subnet.Status.Vpc = new(tcvpc.Vpc)
 	}
 	if subnet.Status.LastRetry == nil {
 		subnet.Status.LastRetry = new(string)
@@ -112,9 +112,9 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 		r.Update(context.TODO(), subnet)
 		return r.createSubnet(subnet)
 	} else if *subnet.Status.Status == "PROCESSING" {
-		log.Printf("subnet %s is in PROCESSING status, ignore", *subnet.Spec.SubnetName)
+		log.Printf("subnet %s is in PROCESSING status, ignore", *subnet.Spec.Subnet.SubnetName)
 	} else if *subnet.Status.Status == "PENDING" {
-		log.Printf("subnet %s is in PENDING status, ignore for now", *subnet.Spec.SubnetName)
+		log.Printf("subnet %s is in PENDING status, ignore for now", *subnet.Spec.Subnet.SubnetName)
 	} else if *subnet.Status.Status == "ERROR" {
 		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *subnet.Status.LastRetry)
 		//only retry 10 times, only retry every 1 minute
@@ -125,9 +125,9 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 				return r.checkSubnetStatus(subnet)
 			}
 		}
-		log.Println("not retrying for subnet:", *subnet.Spec.SubnetName)
+		log.Println("not retrying for subnet:", *subnet.Spec.Subnet.SubnetName)
 	} else if *subnet.Status.Status == "READY" {
-		log.Printf("vpc %s is in READY status, check the status from tencnet cloud", *subnet.Spec.SubnetName)
+		log.Printf("vpc %s is in READY status, check the status from tencnet cloud", *subnet.Spec.Subnet.SubnetName)
 		return r.checkSubnetStatus(subnet)
 	}
 	return nil
@@ -136,18 +136,11 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 func (r *SubnetReconciler) createSubnet(subnet *networkv1alpha1.Subnet) error {
 	tencentClient, _ := tcvpc.NewClient(common.GerCredential(), *subnet.Spec.Region, profile.NewClientProfile())
 	request := tcvpc.NewCreateSubnetRequest()
-	request.SubnetName = subnet.Spec.SubnetName
-	request.CidrBlock = subnet.Spec.CidrBlock
-	request.Zone = subnet.Spec.Zone
-	for _, tag := range subnet.Spec.Tags {
-		log.Printf("tag key:%s, tag value: %s", *tag.Key, *tag.Value)
-		request.Tags = append(request.Tags, &tcvpc.Tag{
-			Key:   tag.Key,
-			Value: tag.Value,
-		})
-	}
-	//if vpc id is not empty, use vpc id
-	if subnet.Spec.VpcId == nil || *subnet.Spec.VpcId == "" {
+	request.SubnetName = subnet.Spec.Subnet.SubnetName
+	request.CidrBlock = subnet.Spec.Subnet.CidrBlock
+	request.Zone = subnet.Spec.Subnet.Zone
+	request.Tags = subnet.Spec.Subnet.TagSet
+	if subnet.Spec.Subnet.VpcId == nil || *subnet.Spec.Subnet.VpcId == "" {
 		k8sRequest := types.NamespacedName{
 			Name:      *subnet.Spec.VpcRef.Name,
 			Namespace: subnet.Namespace,
@@ -166,7 +159,7 @@ func (r *SubnetReconciler) createSubnet(subnet *networkv1alpha1.Subnet) error {
 		}
 		request.VpcId = vpc.Status.VpcId
 	} else {
-		request.VpcId = subnet.Spec.VpcId
+		request.VpcId = subnet.Spec.Subnet.VpcId
 	}
 	log.Println("request:", request.ToJsonString())
 	resp, err := tencentClient.CreateSubnet(request)

@@ -34,23 +34,157 @@ spec:
         spec:
           description: SecurityGroupSpec defines the desired state of SecurityGroup
           properties:
-            groupDescription:
-              type: string
-            groupName:
-              type: string
             region:
               description: Foo is an example field of SecurityGroup. Edit SecurityGroup_types.go
                 to remove/update
               type: string
-            tags:
-              items:
-                properties:
-                  key:
-                    type: string
-                  value:
-                    type: string
-                type: object
-              type: array
+            securityGroup:
+              properties:
+                CreatedTime:
+                  description: 安全组创建时间。
+                  type: string
+                IsDefault:
+                  description: 是否是默认安全组，默认安全组不支持删除。
+                  type: boolean
+                ProjectId:
+                  description: 项目id，默认0。可在qcloud控制台项目管理页面查询到。
+                  type: string
+                SecurityGroupDesc:
+                  description: 安全组备注，最多100个字符。
+                  type: string
+                SecurityGroupId:
+                  description: 安全组实例ID，例如：sg-ohuuioma。
+                  type: string
+                SecurityGroupName:
+                  description: 安全组名称，可任意命名，但不得超过60个字符。
+                  type: string
+                TagSet:
+                  description: 标签键值对。
+                  items:
+                    properties:
+                      Key:
+                        description: 标签键 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                      Value:
+                        description: 标签值 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                    type: object
+                  type: array
+              type: object
+            securityGroupPolicySet:
+              properties:
+                Egress:
+                  description: 出站规则。
+                  items:
+                    properties:
+                      Action:
+                        description: ACCEPT 或 DROP。
+                        type: string
+                      AddressTemplate:
+                        description: IP地址ID或者ID地址组ID。
+                        properties:
+                          AddressGroupId:
+                            description: IP地址组ID，例如：ipmg-2uw6ujo6。
+                            type: string
+                          AddressId:
+                            description: IP地址ID，例如：ipm-2uw6ujo6。
+                            type: string
+                        type: object
+                      CidrBlock:
+                        description: 网段或IP(互斥)。
+                        type: string
+                      Ipv6CidrBlock:
+                        description: 网段或IPv6(互斥)。
+                        type: string
+                      ModifyTime:
+                        description: 安全组最近修改时间。
+                        type: string
+                      PolicyDescription:
+                        description: 安全组规则描述。
+                        type: string
+                      PolicyIndex:
+                        description: 安全组规则索引号，值会随着安全组规则的变更动态变化。使用PolicyIndex时，请先调用`DescribeSecurityGroupPolicies`获取到规则的PolicyIndex，并且结合返回值中的Version一起使用处理规则。
+                        format: int64
+                        type: integer
+                      Port:
+                        description: 端口(all, 离散port,  range)。
+                        type: string
+                      Protocol:
+                        description: '协议, 取值: TCP,UDP,ICMP,ICMPv6,ALL。'
+                        type: string
+                      SecurityGroupId:
+                        description: 安全组实例ID，例如：sg-ohuuioma。
+                        type: string
+                      ServiceTemplate:
+                        description: 协议端口ID或者协议端口组ID。ServiceTemplate和Protocol+Port互斥。
+                        properties:
+                          ServiceGroupId:
+                            description: 协议端口组ID，例如：ppmg-f5n1f8da。
+                            type: string
+                          ServiceId:
+                            description: 协议端口ID，例如：ppm-f5n1f8da。
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                Ingress:
+                  description: 入站规则。
+                  items:
+                    properties:
+                      Action:
+                        description: ACCEPT 或 DROP。
+                        type: string
+                      AddressTemplate:
+                        description: IP地址ID或者ID地址组ID。
+                        properties:
+                          AddressGroupId:
+                            description: IP地址组ID，例如：ipmg-2uw6ujo6。
+                            type: string
+                          AddressId:
+                            description: IP地址ID，例如：ipm-2uw6ujo6。
+                            type: string
+                        type: object
+                      CidrBlock:
+                        description: 网段或IP(互斥)。
+                        type: string
+                      Ipv6CidrBlock:
+                        description: 网段或IPv6(互斥)。
+                        type: string
+                      ModifyTime:
+                        description: 安全组最近修改时间。
+                        type: string
+                      PolicyDescription:
+                        description: 安全组规则描述。
+                        type: string
+                      PolicyIndex:
+                        description: 安全组规则索引号，值会随着安全组规则的变更动态变化。使用PolicyIndex时，请先调用`DescribeSecurityGroupPolicies`获取到规则的PolicyIndex，并且结合返回值中的Version一起使用处理规则。
+                        format: int64
+                        type: integer
+                      Port:
+                        description: 端口(all, 离散port,  range)。
+                        type: string
+                      Protocol:
+                        description: '协议, 取值: TCP,UDP,ICMP,ICMPv6,ALL。'
+                        type: string
+                      SecurityGroupId:
+                        description: 安全组实例ID，例如：sg-ohuuioma。
+                        type: string
+                      ServiceTemplate:
+                        description: 协议端口ID或者协议端口组ID。ServiceTemplate和Protocol+Port互斥。
+                        properties:
+                          ServiceGroupId:
+                            description: 协议端口组ID，例如：ppmg-f5n1f8da。
+                            type: string
+                          ServiceId:
+                            description: 协议端口ID，例如：ppm-f5n1f8da。
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                Version:
+                  description: 安全组规则当前版本。用户每次更新安全规则版本会自动加1，防止更新的路由规则已过期，不填不考虑冲突。
+                  type: string
+              type: object
           type: object
         status:
           description: SecurityGroupStatus defines the observed state of SecurityGroup
@@ -63,8 +197,153 @@ spec:
               type: string
             retryCount:
               type: integer
-            securityGroupId:
-              type: string
+            securityGroup:
+              properties:
+                CreatedTime:
+                  description: 安全组创建时间。
+                  type: string
+                IsDefault:
+                  description: 是否是默认安全组，默认安全组不支持删除。
+                  type: boolean
+                ProjectId:
+                  description: 项目id，默认0。可在qcloud控制台项目管理页面查询到。
+                  type: string
+                SecurityGroupDesc:
+                  description: 安全组备注，最多100个字符。
+                  type: string
+                SecurityGroupId:
+                  description: 安全组实例ID，例如：sg-ohuuioma。
+                  type: string
+                SecurityGroupName:
+                  description: 安全组名称，可任意命名，但不得超过60个字符。
+                  type: string
+                TagSet:
+                  description: 标签键值对。
+                  items:
+                    properties:
+                      Key:
+                        description: 标签键 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                      Value:
+                        description: 标签值 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                    type: object
+                  type: array
+              type: object
+            securityGroupPolicySet:
+              properties:
+                Egress:
+                  description: 出站规则。
+                  items:
+                    properties:
+                      Action:
+                        description: ACCEPT 或 DROP。
+                        type: string
+                      AddressTemplate:
+                        description: IP地址ID或者ID地址组ID。
+                        properties:
+                          AddressGroupId:
+                            description: IP地址组ID，例如：ipmg-2uw6ujo6。
+                            type: string
+                          AddressId:
+                            description: IP地址ID，例如：ipm-2uw6ujo6。
+                            type: string
+                        type: object
+                      CidrBlock:
+                        description: 网段或IP(互斥)。
+                        type: string
+                      Ipv6CidrBlock:
+                        description: 网段或IPv6(互斥)。
+                        type: string
+                      ModifyTime:
+                        description: 安全组最近修改时间。
+                        type: string
+                      PolicyDescription:
+                        description: 安全组规则描述。
+                        type: string
+                      PolicyIndex:
+                        description: 安全组规则索引号，值会随着安全组规则的变更动态变化。使用PolicyIndex时，请先调用`DescribeSecurityGroupPolicies`获取到规则的PolicyIndex，并且结合返回值中的Version一起使用处理规则。
+                        format: int64
+                        type: integer
+                      Port:
+                        description: 端口(all, 离散port,  range)。
+                        type: string
+                      Protocol:
+                        description: '协议, 取值: TCP,UDP,ICMP,ICMPv6,ALL。'
+                        type: string
+                      SecurityGroupId:
+                        description: 安全组实例ID，例如：sg-ohuuioma。
+                        type: string
+                      ServiceTemplate:
+                        description: 协议端口ID或者协议端口组ID。ServiceTemplate和Protocol+Port互斥。
+                        properties:
+                          ServiceGroupId:
+                            description: 协议端口组ID，例如：ppmg-f5n1f8da。
+                            type: string
+                          ServiceId:
+                            description: 协议端口ID，例如：ppm-f5n1f8da。
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                Ingress:
+                  description: 入站规则。
+                  items:
+                    properties:
+                      Action:
+                        description: ACCEPT 或 DROP。
+                        type: string
+                      AddressTemplate:
+                        description: IP地址ID或者ID地址组ID。
+                        properties:
+                          AddressGroupId:
+                            description: IP地址组ID，例如：ipmg-2uw6ujo6。
+                            type: string
+                          AddressId:
+                            description: IP地址ID，例如：ipm-2uw6ujo6。
+                            type: string
+                        type: object
+                      CidrBlock:
+                        description: 网段或IP(互斥)。
+                        type: string
+                      Ipv6CidrBlock:
+                        description: 网段或IPv6(互斥)。
+                        type: string
+                      ModifyTime:
+                        description: 安全组最近修改时间。
+                        type: string
+                      PolicyDescription:
+                        description: 安全组规则描述。
+                        type: string
+                      PolicyIndex:
+                        description: 安全组规则索引号，值会随着安全组规则的变更动态变化。使用PolicyIndex时，请先调用`DescribeSecurityGroupPolicies`获取到规则的PolicyIndex，并且结合返回值中的Version一起使用处理规则。
+                        format: int64
+                        type: integer
+                      Port:
+                        description: 端口(all, 离散port,  range)。
+                        type: string
+                      Protocol:
+                        description: '协议, 取值: TCP,UDP,ICMP,ICMPv6,ALL。'
+                        type: string
+                      SecurityGroupId:
+                        description: 安全组实例ID，例如：sg-ohuuioma。
+                        type: string
+                      ServiceTemplate:
+                        description: 协议端口ID或者协议端口组ID。ServiceTemplate和Protocol+Port互斥。
+                        properties:
+                          ServiceGroupId:
+                            description: 协议端口组ID，例如：ppmg-f5n1f8da。
+                            type: string
+                          ServiceId:
+                            description: 协议端口ID，例如：ppm-f5n1f8da。
+                            type: string
+                        type: object
+                    type: object
+                  type: array
+                Version:
+                  description: 安全组规则当前版本。用户每次更新安全规则版本会自动加1，防止更新的路由规则已过期，不填不考虑冲突。
+                  type: string
+              type: object
             status:
               description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
                 of cluster Important: Run "make" to regenerate code after modifying
