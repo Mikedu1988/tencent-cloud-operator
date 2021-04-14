@@ -1,3 +1,4 @@
+---
 apiVersion: network.tencentcloud.kubecooler.com/v1alpha1
 kind: SecurityGroup
 metadata:

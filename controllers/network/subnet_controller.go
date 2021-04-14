@@ -19,15 +19,16 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"log"
+	"tencent-cloud-operator/internal/tencent/common"
+	"time"
+
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"tencent-cloud-operator/internal/tencent/common"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,7 +91,7 @@ func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			r.Log.Info("ref vpc not ready, requeue after 30 seconds")
 			*subnet.Status.Status = "PENDING"
 			*subnet.Status.Reason = "ref vpc not ready"
-			r.Update(context.TODO(), subnet)
+			_ = r.Update(context.TODO(), subnet)
 			return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
 		}
 		*subnet.Status.Status = "ERROR"
@@ -100,7 +101,7 @@ func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			*subnet.Status.Code = cloudError.Code
 			*subnet.Status.Reason = cloudError.Message
 		}
-		r.Update(context.TODO(), subnet)
+		_ = r.Update(context.TODO(), subnet)
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 	}
 	return ctrl.Result{}, nil
@@ -109,7 +110,7 @@ func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error {
 	if subnet.Status.Status == nil || *subnet.Status.Status == "" {
 		*subnet.Status.Status = "PROCESSING"
-		r.Update(context.TODO(), subnet)
+		_ = r.Update(context.TODO(), subnet)
 		return r.createSubnet(subnet)
 	} else if *subnet.Status.Status == "PROCESSING" {
 		log.Printf("subnet %s is in PROCESSING status, ignore", *subnet.Spec.Subnet.SubnetName)
@@ -118,7 +119,7 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 	} else if *subnet.Status.Status == "ERROR" {
 		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *subnet.Status.LastRetry)
 		//only retry 10 times, only retry every 1 minute
-		if *subnet.Status.RetryCount < 10 && time.Now().Sub(lastRetried) > time.Minute {
+		if *subnet.Status.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
 			if subnet.Status.SubnetId == nil || *subnet.Status.SubnetId == "" {
 				return r.createSubnet(subnet)
 			} else {

@@ -1,14 +1,16 @@
+---
 apiVersion: network.tencentcloud.kubecooler.com/v1alpha1
 kind: Vpc
 metadata:
   name: vpc-duliyang
 spec:
   # Add fields here
-  vpcName: 'vpc-duliyang-test'
-  cidrBlock: '10.0.0.0/16'
+  vpcName: vpc-duliyang-test
+  cidrBlock: 10.0.0.0/16
   enableMulticast: 'false'
-  region: 'ap-shanghai'
+  region: ap-shanghai
   tags:
     - key: tag1
       value: value1
 ---
+...

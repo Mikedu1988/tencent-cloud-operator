@@ -1,0 +1,14 @@
+---
+  # can't have this rule until https://github.com/codingjoe/relint/issues/15
+  # # https://semver.org/#is-v123-a-semantic-version
+  # - name: VERSION files must contain semver.
+  #   # LOLWAT? https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string
+  #   pattern: '^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-((?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+([0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?$'
+  #   hint: "https://semver.org/#is-v123-a-semantic-version"
+  #   filePattern: '.*VERSION'
+
+  # kill this when https://github.com/codingjoe/relint/issues/15 is fixed.
+  - name: VERSION file contents must not be prefixed with a v  # yamllint disable-line rule:indentation
+    pattern: ^v
+    hint: https://semver.org/#is-v123-a-semantic-version
+    filePattern: .*VERSION

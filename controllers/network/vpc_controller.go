@@ -18,16 +18,17 @@ package controllers
 
 import (
 	"context"
+	"log"
+	"tencent-cloud-operator/internal/tencent/common"
+	"time"
+
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"log"
 	"sigs.k8s.io/controller-runtime/pkg/event"
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"tencent-cloud-operator/internal/tencent/common"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -90,7 +91,7 @@ func (r *VpcReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 			*vpc.Status.Code = cloudError.Code
 			*vpc.Status.Reason = cloudError.Message
 		}
-		r.Update(context.TODO(), vpc)
+		_ = r.Update(context.TODO(), vpc)
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 	}
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -99,14 +100,14 @@ func (r *VpcReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 func (r *VpcReconciler) vpcReconcile(vpc *networkv1alpha1.Vpc) error {
 	if *vpc.Status.Status == "" || vpc.Status.Status == nil {
 		*vpc.Status.Status = "PROCESSING"
-		r.Update(context.TODO(), vpc)
+		_ = r.Update(context.TODO(), vpc)
 		return r.createVpc(vpc)
 	} else if *vpc.Status.Status == "PROCESSING" {
 		log.Printf("vpc %s is in PROCESSING status, ignore", *vpc.Spec.VpcName)
 	} else if *vpc.Status.Status == "ERROR" {
 		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *vpc.Status.LastRetry)
 		//only retry 10 times, only retry every 1 minute
-		if *vpc.Status.RetryCount < 10 && time.Now().Sub(lastRetried) > time.Minute {
+		if *vpc.Status.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
 			if vpc.Status.VpcId == nil || *vpc.Status.VpcId == "" {
 				return r.createVpc(vpc)
 			} else {

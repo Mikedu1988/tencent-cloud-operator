@@ -1,24 +1,25 @@
+---
 # permissions for end users to edit vpcs.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: vpc-editor-role
 rules:
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - vpcs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - vpcs/status
-  verbs:
-  - get
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - vpcs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - vpcs/status
+    verbs:
+      - get

@@ -18,15 +18,16 @@ package controllers
 
 import (
 	"context"
+	"log"
+	"strings"
+	"tencent-cloud-operator/internal/tencent/common"
+	"time"
+
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"log"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
-	"tencent-cloud-operator/internal/tencent/common"
-	"time"
 
 	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
@@ -99,7 +100,7 @@ func (r *SecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 			*securityGroup.Status.Code = cloudError.Code
 			*securityGroup.Status.Reason = cloudError.Message
 		}
-		r.Update(context.TODO(), securityGroup)
+		_ = r.Update(context.TODO(), securityGroup)
 		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
 	}
 	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
@@ -108,7 +109,7 @@ func (r *SecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 func (r *SecurityGroupReconciler) securityGroupReconcile(securityGroup *networkv1alpha1.SecurityGroup) error {
 	if securityGroup.Status.Status == nil || *securityGroup.Status.Status == "" {
 		*securityGroup.Status.Status = "PROCESSING"
-		r.Update(context.TODO(), securityGroup)
+		_ = r.Update(context.TODO(), securityGroup)
 		return r.createSecurityGroup(securityGroup)
 	} else if *securityGroup.Status.Status == "PROCESSING" {
 		log.Printf("SecurityGroup %s is in PROCESSING status, ignore", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
@@ -117,7 +118,7 @@ func (r *SecurityGroupReconciler) securityGroupReconcile(securityGroup *networkv
 	} else if *securityGroup.Status.Status == "ERROR" {
 		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *securityGroup.Status.LastRetry)
 		//only retry 10 times, only retry every 1 minute
-		if *securityGroup.Status.RetryCount < 10 && time.Now().Sub(lastRetried) > time.Minute {
+		if *securityGroup.Status.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
 			if securityGroup.Status.SecurityGroupStatus.SecurityGroupId == nil || *securityGroup.Status.SecurityGroupStatus.SecurityGroupId == "" {
 				return r.createSecurityGroup(securityGroup)
 			} else {
@@ -250,7 +251,7 @@ func (r *SecurityGroupReconciler) syncSecurityGroupPolicySet(securityGroup *netw
 		return err
 	}
 	securityGroup.Status.SecurityGroupPolicySetStatus = resp.Response.SecurityGroupPolicySet
-	r.Update(context.TODO(), securityGroup)
+	_ = r.Update(context.TODO(), securityGroup)
 	return nil
 }
 
@@ -277,7 +278,7 @@ func diffSecurityGroupPolicySet(policy *tcvpc.SecurityGroupPolicySet, spec *tcvp
 			continue
 		}
 		//if the policy we get from cloud dose not match spec, replace the policy
-		if strings.ToLower(*policy.Ingress[index].CidrBlock) != strings.ToLower(*ingress.CidrBlock) || strings.ToLower(*policy.Ingress[index].Port) != strings.ToLower(*ingress.Port) || strings.ToLower(*policy.Ingress[index].Action) != strings.ToLower(*ingress.Action) || strings.ToLower(*policy.Ingress[index].Protocol) != strings.ToLower(*ingress.Protocol) || *policy.Ingress[index].PolicyDescription != *ingress.PolicyDescription {
+		if strings.EqualFold(*policy.Ingress[index].CidrBlock, *ingress.CidrBlock) || strings.EqualFold(*policy.Ingress[index].Port, *ingress.Port) || strings.EqualFold(*policy.Ingress[index].Action, *ingress.Action) || strings.EqualFold(*policy.Ingress[index].Protocol, *ingress.Protocol) || *policy.Ingress[index].PolicyDescription != *ingress.PolicyDescription {
 			ingress.PolicyIndex = new(int64)
 			*ingress.PolicyIndex = int64(index)
 			replacePolicySet.Ingress = append(replacePolicySet.Ingress, ingress)
@@ -289,7 +290,7 @@ func diffSecurityGroupPolicySet(policy *tcvpc.SecurityGroupPolicySet, spec *tcvp
 			insertPolicySet.Egress = append(insertPolicySet.Egress, egress)
 			continue
 		}
-		if strings.ToLower(*policy.Egress[index].CidrBlock) != strings.ToLower(*egress.CidrBlock) || strings.ToLower(*policy.Egress[index].Port) != strings.ToLower(*egress.Port) || strings.ToLower(*policy.Egress[index].Action) != strings.ToLower(*egress.Action) || strings.ToLower(*policy.Egress[index].Protocol) != strings.ToLower(*egress.Protocol) || *policy.Egress[index].PolicyDescription != *egress.PolicyDescription {
+		if strings.EqualFold(*policy.Egress[index].CidrBlock, *egress.CidrBlock) || strings.EqualFold(*policy.Egress[index].Port, *egress.Port) || strings.EqualFold(*policy.Egress[index].Action, *egress.Action) || strings.EqualFold(*policy.Egress[index].Protocol, *egress.Protocol) || *policy.Egress[index].PolicyDescription != *egress.PolicyDescription {
 			egress.PolicyIndex = new(int64)
 			*egress.PolicyIndex = int64(index)
 			replacePolicySet.Egress = append(replacePolicySet.Egress, egress)
