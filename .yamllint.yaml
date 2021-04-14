@@ -1,0 +1,25 @@
+---
+# https://yamllint.readthedocs.io/en/stable/configuration.html#default-configuration
+extends: default
+
+yaml-files:
+  - .toolsharerc
+  - .yamllint.yaml
+  - '*.yaml'
+  - '*.yml'
+  - OWNERS_ALIASES
+  - OWNERS
+
+ignore: |
+  # TODO(SVP-230): ignore forked copy of https://github.com/googleforgames/agones/blob/v1.1.0/install/yaml/install.yaml
+  # until we have a better way to vendor and customise upstream includes
+  # Ignore helm templates as they aren't valid yaml until generated
+  charts/**/templates/*.yaml
+  charts/**/templates/*/*.yaml
+
+rules:
+  document-start:
+    level: error
+  line-length:
+    max: 1200
+    level: warning

@@ -1,0 +1,50 @@
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: MutatingWebhookConfiguration
+metadata:
+  creationTimestamp:
+  name: mutating-webhook-configuration
+webhooks:
+  - clientConfig:
+      caBundle: Cg==
+      service:
+        name: webhook-service
+        namespace: system
+        path: /mutate-network-tencentcloud-kubecooler-com-v1alpha1-vpc
+    failurePolicy: Fail
+    name: mvpc.kb.io
+    rules:
+      - apiGroups:
+          - network.tencentcloud.kubecooler.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - vpcs
+---
+apiVersion: admissionregistration.k8s.io/v1beta1
+kind: ValidatingWebhookConfiguration
+metadata:
+  creationTimestamp:
+  name: validating-webhook-configuration
+webhooks:
+  - clientConfig:
+      caBundle: Cg==
+      service:
+        name: webhook-service
+        namespace: system
+        path: /validate-network-tencentcloud-kubecooler-com-v1alpha1-vpc
+    failurePolicy: Fail
+    name: vvpc.kb.io
+    rules:
+      - apiGroups:
+          - network.tencentcloud.kubecooler.com
+        apiVersions:
+          - v1alpha1
+        operations:
+          - CREATE
+          - UPDATE
+        resources:
+          - vpcs

@@ -1,0 +1,14 @@
+domain: tencentcloud.kubecooler.com
+multigroup: true
+repo: tencent-cloud-operator
+resources:
+- group: network
+  kind: Vpc
+  version: v1alpha1
+- group: network
+  kind: Subnet
+  version: v1alpha1
+- group: network
+  kind: SecurityGroup
+  version: v1alpha1
+version: "2"
