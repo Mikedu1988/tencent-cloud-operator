@@ -27,7 +27,7 @@ repos:
           - --mapping=2
           - --sequence=4
           - --offset=2
-          - --width=1200    # match .yamllint.yaml; we don't care about line-length.
+          - --width=1200
         exclude: .+/helm/templates/.+
 
   - repo: https://github.com/gruntwork-io/pre-commit

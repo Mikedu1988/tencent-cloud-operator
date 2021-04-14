@@ -1,10 +1,13 @@
 package common
 
-import "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+import (
+	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common"
+	"os"
+)
 
 var credential = common.NewCredential(
-	"AKIDeNGBtPSsmpgFag6GzTivunR0LTO4fryq",
-	"6wa4Rnu52lHSRE2eP2WsqkS0GaklZCpO",
+	os.Getenv("TENCENT_CLOUD_ACCESS_KEY"),
+	os.Getenv("TENCENT_CLOUD_ACCESS_SECRET"),
 )
 
 func GerCredential() *common.Credential {
