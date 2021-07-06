@@ -9,12 +9,8 @@ install_pyenv() {
   log_info "Installing python via pyenv-installer (https://github.com/pyenv/pyenv-installer#installation--update--uninstallation) to avoid taking a dependency on system's default python for really good python ecosystem reasons. See also https://opensource.com/article/19/5/python-3-default-mac \"What we should do\" section at the end (after all the \"We could do x but don't\" parts)..."
   curl -L https://github.com/pyenv/pyenv-installer/raw/master/bin/pyenv-installer | bash
   log_warn "pyenv was just installed; please:"
-  log_warn "1. modify your shell configuration (~/.bash_profile, ~/.zshrc etc) with the following:"
-  log_warn "export PATH=\"\${HOME}/.pyenv/bin:\${PATH}\""
-  log_warn "eval \"\$(pyenv init -)\""
-  log_warn "eval \"\$(pyenv virtualenv-init -)\""
-  log_warn "2. restart your shell(s)."
-  log_warn "3. re-run \`onboarding.sh\` to get further."
+  log_warn "1. restart your shell(s)."
+  log_warn "2. re-run \`workflow/setup.sh\` to get further."
 }
 
 log_info "Arranging for python's platform-specific dependencies to be installed. Refer to https://github.com/pyenv/pyenv/wiki/common-build-problems if interested."
@@ -23,7 +19,7 @@ if [[ "${OSTYPE}" == *"darwin"* ]]; then
   log_info "Installing dependencies from homebrew..."
   brew install "readline" "xz"
 elif [[ "${OSTYPE}" == *"linux"* ]]; then
-  log_info "Installing dependencies from apt (on the optimistic expectation you have ubuntu/debian; if you don't, please report to #eng-velocity-support)..."
+  log_info "Installing dependencies from apt (on the optimistic expectation you have ubuntu/debian;"
   sudo apt-get update &&
     sudo apt-get install -y \
       build-essential \
@@ -46,7 +42,7 @@ elif [[ "${OSTYPE}" == *"linux"* ]]; then
       zlib1g-dev
 else
   log_error "Unsupported \$OSTYPE: ${OSTYPE}"
-  log_error "You can continue, but please report errors to #eng-velocity-support. Press [enter] to continue."
+  log_error "You can continue, Press [enter] to continue."
   read -rp
 fi
 if ! command -v pyenv >"/dev/null"; then
@@ -56,15 +52,17 @@ fi
 pyenv_installer_dir="${HOME}/.pyenv/plugins/pyenv-installer"
 if ! [[ -d "${pyenv_installer_dir}" ]]; then
   log_error "pyenv is installed, but not via pyenv-installer (${pyenv_installer_dir} did not exist)."
-  log_fatal "Please remove your alternate install of pyenv and re-run onboarding.sh - alternative installations are not supported. Supported: https://github.com/pyenv/pyenv-installer#installation--update--uninstallation. For help, use #eng-velocity-support."
+  log_fatal "Please remove your alternate install of pyenv, and run this script again - alternative installations are not supported. Supported: https://github.com/pyenv/pyenv-installer#installation--update--uninstallation."
 fi
 
 log_info "Installing python version from \"$(pwd)/.python-version\" if necessary..."
 if ! pyenv update >"/dev/null"; then
   log_fatal "pyenv-build must be installed. Install it via pyenv-installer: https://github.com/pyenv/pyenv-installer#installation--update--uninstallation"
 fi
+log_info "pyenv update"
 pyenv update
-pyenv install --skip-existing
+log_info "pyenv install --skip-existing"
+pyenv install --skip-existing "$(pyenv local)"
 if ! pyenv virtualenvs >"/dev/null"; then
   log_fatal "pyenv-virtualenv must be installed. Install it via pyenv-installer: https://github.com/pyenv/pyenv-installer#installation--update--uninstallation"
 fi
