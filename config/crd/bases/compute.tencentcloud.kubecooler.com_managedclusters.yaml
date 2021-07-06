@@ -1,0 +1,296 @@
+
+---
+apiVersion: apiextensions.k8s.io/v1beta1
+kind: CustomResourceDefinition
+metadata:
+  annotations:
+    controller-gen.kubebuilder.io/version: v0.2.5
+  creationTimestamp: null
+  name: managedclusters.compute.tencentcloud.kubecooler.com
+spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.cluster.ClusterId
+    name: ClusterId
+    type: string
+  - JSONPath: .status.resourceStatus.status
+    name: Status
+    type: string
+  group: compute.tencentcloud.kubecooler.com
+  names:
+    kind: ManagedCluster
+    listKind: ManagedClusterList
+    plural: managedclusters
+    singular: managedcluster
+  scope: Namespaced
+  subresources: {}
+  validation:
+    openAPIV3Schema:
+      description: ManagedCluster is the Schema for the managedclusters API
+      properties:
+        apiVersion:
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          type: string
+        kind:
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          type: string
+        metadata:
+          type: object
+        spec:
+          description: ManagedClusterSpec defines the desired state of ManagedCluster
+          properties:
+            cluster:
+              properties:
+                ClusterDescription:
+                  description: 集群描述
+                  type: string
+                ClusterId:
+                  description: 集群ID
+                  type: string
+                ClusterMaterNodeNum:
+                  description: 集群当前master数量
+                  format: int64
+                  type: integer
+                ClusterName:
+                  description: 集群名称
+                  type: string
+                ClusterNetworkSettings:
+                  description: 集群网络相关参数
+                  properties:
+                    ClusterCIDR:
+                      description: 用于分配集群容器和服务 IP 的 CIDR，不得与 VPC CIDR 冲突，也不得与同 VPC
+                        内其他集群 CIDR 冲突
+                      type: string
+                    Cni:
+                      description: 网络插件是否启用CNI(默认开启)
+                      type: boolean
+                    IgnoreClusterCIDRConflict:
+                      description: 是否忽略 ClusterCIDR 冲突错误, 默认不忽略
+                      type: boolean
+                    Ipvs:
+                      description: 是否启用IPVS(默认不开启)
+                      type: boolean
+                    MaxClusterServiceNum:
+                      description: 集群最大的service数量(默认为256)
+                      format: int64
+                      type: integer
+                    MaxNodePodNum:
+                      description: 集群中每个Node上最大的Pod数量(默认为256)
+                      format: int64
+                      type: integer
+                    VpcId:
+                      description: 集群的VPCID（如果创建空集群，为必传值，否则自动设置为和集群的节点保持一致）
+                      type: string
+                  type: object
+                ClusterNodeNum:
+                  description: 集群当前node数量
+                  format: int64
+                  type: integer
+                ClusterOs:
+                  description: 集群系统。centos7.2x86_64 或者 ubuntu16.04.1 LTSx86_64，默认取值为ubuntu16.04.1
+                    LTSx86_64
+                  type: string
+                ClusterStatus:
+                  description: 集群状态 (Running 运行中  Creating 创建中 Abnormal 异常  )
+                  type: string
+                ClusterType:
+                  description: 集群类型，托管集群：MANAGED_CLUSTER，独立集群：INDEPENDENT_CLUSTER。
+                  type: string
+                ClusterVersion:
+                  description: 集群版本（默认值为1.10.5）
+                  type: string
+                ContainerRuntime:
+                  description: 集群运行环境docker或container 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                CreatedTime:
+                  description: 创建时间 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                DeletionProtection:
+                  description: 删除保护开关 注意：此字段可能返回 null，表示取不到有效值。
+                  type: boolean
+                ImageId:
+                  description: 集群使用镜像id 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                OsCustomizeType:
+                  description: OsCustomizeType 系统定制类型 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                ProjectId:
+                  description: 集群所属的项目ID
+                  format: int64
+                  type: integer
+                Property:
+                  description: 集群属性(包括集群不同属性的MAP，属性字段包括NodeNameType (lan-ip模式和hostname
+                    模式，默认无lan-ip模式)) 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                TagSpecification:
+                  description: 标签描述列表。 注意：此字段可能返回 null，表示取不到有效值。
+                  items:
+                    properties:
+                      ResourceType:
+                        description: 标签绑定的资源类型，当前支持类型："cluster" 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                      Tags:
+                        description: 标签对列表 注意：此字段可能返回 null，表示取不到有效值。
+                        items:
+                          properties:
+                            Key:
+                              description: 标签键
+                              type: string
+                            Value:
+                              description: 标签值
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  type: array
+              type: object
+            region:
+              type: string
+            vpcRef:
+              properties:
+                name:
+                  description: The name to refer from, we don't allow to ref from
+                    another namespace
+                  type: string
+              type: object
+          type: object
+        status:
+          description: ManagedClusterStatus defines the observed state of ManagedCluster
+          properties:
+            cluster:
+              properties:
+                ClusterDescription:
+                  description: 集群描述
+                  type: string
+                ClusterId:
+                  description: 集群ID
+                  type: string
+                ClusterMaterNodeNum:
+                  description: 集群当前master数量
+                  format: int64
+                  type: integer
+                ClusterName:
+                  description: 集群名称
+                  type: string
+                ClusterNetworkSettings:
+                  description: 集群网络相关参数
+                  properties:
+                    ClusterCIDR:
+                      description: 用于分配集群容器和服务 IP 的 CIDR，不得与 VPC CIDR 冲突，也不得与同 VPC
+                        内其他集群 CIDR 冲突
+                      type: string
+                    Cni:
+                      description: 网络插件是否启用CNI(默认开启)
+                      type: boolean
+                    IgnoreClusterCIDRConflict:
+                      description: 是否忽略 ClusterCIDR 冲突错误, 默认不忽略
+                      type: boolean
+                    Ipvs:
+                      description: 是否启用IPVS(默认不开启)
+                      type: boolean
+                    MaxClusterServiceNum:
+                      description: 集群最大的service数量(默认为256)
+                      format: int64
+                      type: integer
+                    MaxNodePodNum:
+                      description: 集群中每个Node上最大的Pod数量(默认为256)
+                      format: int64
+                      type: integer
+                    VpcId:
+                      description: 集群的VPCID（如果创建空集群，为必传值，否则自动设置为和集群的节点保持一致）
+                      type: string
+                  type: object
+                ClusterNodeNum:
+                  description: 集群当前node数量
+                  format: int64
+                  type: integer
+                ClusterOs:
+                  description: 集群系统。centos7.2x86_64 或者 ubuntu16.04.1 LTSx86_64，默认取值为ubuntu16.04.1
+                    LTSx86_64
+                  type: string
+                ClusterStatus:
+                  description: 集群状态 (Running 运行中  Creating 创建中 Abnormal 异常  )
+                  type: string
+                ClusterType:
+                  description: 集群类型，托管集群：MANAGED_CLUSTER，独立集群：INDEPENDENT_CLUSTER。
+                  type: string
+                ClusterVersion:
+                  description: 集群版本（默认值为1.10.5）
+                  type: string
+                ContainerRuntime:
+                  description: 集群运行环境docker或container 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                CreatedTime:
+                  description: 创建时间 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                DeletionProtection:
+                  description: 删除保护开关 注意：此字段可能返回 null，表示取不到有效值。
+                  type: boolean
+                ImageId:
+                  description: 集群使用镜像id 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                OsCustomizeType:
+                  description: OsCustomizeType 系统定制类型 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                ProjectId:
+                  description: 集群所属的项目ID
+                  format: int64
+                  type: integer
+                Property:
+                  description: 集群属性(包括集群不同属性的MAP，属性字段包括NodeNameType (lan-ip模式和hostname
+                    模式，默认无lan-ip模式)) 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                TagSpecification:
+                  description: 标签描述列表。 注意：此字段可能返回 null，表示取不到有效值。
+                  items:
+                    properties:
+                      ResourceType:
+                        description: 标签绑定的资源类型，当前支持类型："cluster" 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                      Tags:
+                        description: 标签对列表 注意：此字段可能返回 null，表示取不到有效值。
+                        items:
+                          properties:
+                            Key:
+                              description: 标签键
+                              type: string
+                            Value:
+                              description: 标签值
+                              type: string
+                          type: object
+                        type: array
+                    type: object
+                  type: array
+              type: object
+            resourceStatus:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              properties:
+                code:
+                  type: string
+                lastRetry:
+                  type: string
+                reason:
+                  type: string
+                retryCount:
+                  type: integer
+                status:
+                  type: string
+              type: object
+          type: object
+      type: object
+  version: v1alpha1
+  versions:
+  - name: v1alpha1
+    served: true
+    storage: true
+status:
+  acceptedNames:
+    kind: ""
+    plural: ""
+  conditions: []
+  storedVersions: []

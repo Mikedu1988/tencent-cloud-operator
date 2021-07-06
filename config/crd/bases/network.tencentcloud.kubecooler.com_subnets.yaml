@@ -1,12 +1,23 @@
+
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
-  creationTimestamp:
+  creationTimestamp: null
   name: subnets.network.tencentcloud.kubecooler.com
 spec:
+  additionalPrinterColumns:
+  - JSONPath: .status.subnet.SubnetId
+    name: SubNetId
+    type: string
+  - JSONPath: .status.vpc.VpcId
+    name: VpcId
+    type: string
+  - JSONPath: .status.resourceStatus.status
+    name: Status
+    type: string
   group: network.tencentcloud.kubecooler.com
   names:
     kind: Subnet
@@ -14,15 +25,20 @@ spec:
     plural: subnets
     singular: subnet
   scope: Namespaced
+  subresources: {}
   validation:
     openAPIV3Schema:
       description: Subnet is the Schema for the subnets API
       properties:
         apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          description: 'APIVersion defines the versioned schema of this representation
+            of an object. Servers should convert recognized schemas to the latest
+            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
           type: string
         kind:
-          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          description: 'Kind is a string value representing the REST resource this
+            object represents. Servers may infer this from the endpoint the client
+            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
@@ -37,6 +53,9 @@ spec:
                   description: 可用`IPv4`数。
                   format: int64
                   type: integer
+                CdcId:
+                  description: CDC实例ID。 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
                 CidrBlock:
                   description: 子网的 `IPv4` `CIDR`。
                   type: string
@@ -49,6 +68,10 @@ spec:
                 Ipv6CidrBlock:
                   description: 子网的 `IPv6` `CIDR`。
                   type: string
+                IsCdcSubnet:
+                  description: 是否是CDC所属子网。0:否 1:是 注意：此字段可能返回 null，表示取不到有效值。
+                  format: int64
+                  type: integer
                 IsDefault:
                   description: 是否默认子网。
                   type: boolean
@@ -94,26 +117,96 @@ spec:
               description: VpcRef to get the vpc Id
               properties:
                 name:
-                  description: The name to refer from, we don't allow to ref from another namespace
+                  description: The name to refer from, we don't allow to ref from
+                    another namespace
                   type: string
               type: object
           type: object
         status:
           description: SubnetStatus defines the observed state of Subnet
           properties:
-            code:
-              type: string
-            lastRetry:
-              type: string
-            reason:
-              type: string
-            retryCount:
-              type: integer
-            status:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
-              type: string
-            subnetId:
-              type: string
+            resourceStatus:
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
+                of cluster Important: Run "make" to regenerate code after modifying
+                this file'
+              properties:
+                code:
+                  type: string
+                lastRetry:
+                  type: string
+                reason:
+                  type: string
+                retryCount:
+                  type: integer
+                status:
+                  type: string
+              type: object
+            subnet:
+              properties:
+                AvailableIpAddressCount:
+                  description: 可用`IPv4`数。
+                  format: int64
+                  type: integer
+                CdcId:
+                  description: CDC实例ID。 注意：此字段可能返回 null，表示取不到有效值。
+                  type: string
+                CidrBlock:
+                  description: 子网的 `IPv4` `CIDR`。
+                  type: string
+                CreatedTime:
+                  description: 创建时间。
+                  type: string
+                EnableBroadcast:
+                  description: 是否开启广播。
+                  type: boolean
+                Ipv6CidrBlock:
+                  description: 子网的 `IPv6` `CIDR`。
+                  type: string
+                IsCdcSubnet:
+                  description: 是否是CDC所属子网。0:否 1:是 注意：此字段可能返回 null，表示取不到有效值。
+                  format: int64
+                  type: integer
+                IsDefault:
+                  description: 是否默认子网。
+                  type: boolean
+                IsRemoteVpcSnat:
+                  description: 是否为 `SNAT` 地址池子网。
+                  type: boolean
+                NetworkAclId:
+                  description: 关联`ACL`ID
+                  type: string
+                RouteTableId:
+                  description: 路由表实例ID，例如：rtb-l2h8d7c2。
+                  type: string
+                SubnetId:
+                  description: 子网实例`ID`，例如：subnet-bthucmmy。
+                  type: string
+                SubnetName:
+                  description: 子网名称。
+                  type: string
+                TagSet:
+                  description: 标签键值对。
+                  items:
+                    properties:
+                      Key:
+                        description: 标签键 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                      Value:
+                        description: 标签值 注意：此字段可能返回 null，表示取不到有效值。
+                        type: string
+                    type: object
+                  type: array
+                TotalIpAddressCount:
+                  description: 子网`IPv4`总数。
+                  format: int64
+                  type: integer
+                VpcId:
+                  description: '`VPC`实例`ID`。'
+                  type: string
+                Zone:
+                  description: 可用区。
+                  type: string
+              type: object
             vpc:
               properties:
                 AssistantCidrSet:
@@ -135,6 +228,9 @@ spec:
                               description: 可用`IPv4`数。
                               format: int64
                               type: integer
+                            CdcId:
+                              description: CDC实例ID。 注意：此字段可能返回 null，表示取不到有效值。
+                              type: string
                             CidrBlock:
                               description: 子网的 `IPv4` `CIDR`。
                               type: string
@@ -147,6 +243,10 @@ spec:
                             Ipv6CidrBlock:
                               description: 子网的 `IPv6` `CIDR`。
                               type: string
+                            IsCdcSubnet:
+                              description: 是否是CDC所属子网。0:否 1:是 注意：此字段可能返回 null，表示取不到有效值。
+                              format: int64
+                              type: integer
                             IsDefault:
                               description: 是否默认子网。
                               type: boolean
@@ -246,12 +346,12 @@ spec:
       type: object
   version: v1alpha1
   versions:
-    - name: v1alpha1
-      served: true
-      storage: true
+  - name: v1alpha1
+    served: true
+    storage: true
 status:
   acceptedNames:
-    kind: ''
-    plural: ''
+    kind: ""
+    plural: ""
   conditions: []
   storedVersions: []

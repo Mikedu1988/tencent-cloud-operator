@@ -30,6 +30,11 @@ spec:
             - --enable-leader-election
           image: controller:latest
           imagePullPolicy: Always
+          env:
+            - name: TENCENTCLOUD_SECRET_ID
+              value: AKIDeNGBtPSsmpgFag6GzTivunR0LTO4fryq
+            - name: TENCENTCLOUD_SECRET_KEY
+              value: 6wa4Rnu52lHSRE2eP2WsqkS0GaklZCpO
           name: manager
           resources:
             limits:

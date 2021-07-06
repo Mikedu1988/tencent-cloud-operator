@@ -19,8 +19,10 @@ package controllers
 import (
 	"context"
 	"log"
+	"reflect"
 	"strings"
-	"tencent-cloud-operator/internal/tencent/common"
+	"tencent-cloud-operator/internal/common"
+	"tencent-cloud-operator/internal/utils"
 	"time"
 
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
@@ -66,20 +68,13 @@ func (r *SecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 
 	log.Println("found the securityGroup", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
-	if securityGroup.Status.Status == nil {
-		securityGroup.Status.Status = new(string)
-	}
-	if securityGroup.Status.LastRetry == nil {
-		securityGroup.Status.LastRetry = new(string)
-	}
-	if securityGroup.Status.Reason == nil {
-		securityGroup.Status.Reason = new(string)
-	}
-	if securityGroup.Status.RetryCount == nil {
-		securityGroup.Status.RetryCount = new(int)
-	}
-	if securityGroup.Status.Code == nil {
-		securityGroup.Status.Code = new(string)
+	if securityGroup.Status.ResourceStatus == nil {
+		securityGroup.Status.ResourceStatus = new(common.ResourceStatus)
+		securityGroup.Status.ResourceStatus.Status = new(string)
+		securityGroup.Status.ResourceStatus.Reason = new(string)
+		securityGroup.Status.ResourceStatus.RetryCount = new(int)
+		securityGroup.Status.ResourceStatus.Code = new(string)
+		securityGroup.Status.ResourceStatus.LastRetry = new(string)
 	}
 	if securityGroup.Status.SecurityGroupStatus == nil {
 		securityGroup.Status.SecurityGroupStatus = &tcvpc.SecurityGroup{}
@@ -93,42 +88,113 @@ func (r *SecurityGroupReconciler) Reconcile(req ctrl.Request) (ctrl.Result, erro
 	}
 	err = r.securityGroupReconcile(securityGroup)
 	if err != nil {
-		*securityGroup.Status.Status = "ERROR"
-		*securityGroup.Status.LastRetry = time.Now().Format("2006-01-02T15:04:05")
-		*securityGroup.Status.RetryCount++
+		*securityGroup.Status.ResourceStatus.Status = "ERROR"
+		*securityGroup.Status.ResourceStatus.LastRetry = time.Now().UTC().Format("2006-01-02T15:04:05")
+		*securityGroup.Status.ResourceStatus.RetryCount++
 		if cloudError, ok := err.(*tcerrors.TencentCloudSDKError); ok {
-			*securityGroup.Status.Code = cloudError.Code
-			*securityGroup.Status.Reason = cloudError.Message
+			*securityGroup.Status.ResourceStatus.Code = cloudError.Code
+			*securityGroup.Status.ResourceStatus.Reason = cloudError.Message
 		}
 		_ = r.Update(context.TODO(), securityGroup)
-		return ctrl.Result{RequeueAfter: 30 * time.Second}, err
+		return ctrl.Result{RequeueAfter: common.RequeueInterval}, err
 	}
-	return ctrl.Result{RequeueAfter: 30 * time.Second}, nil
+	return ctrl.Result{RequeueAfter: common.RequeueInterval}, nil
 }
 
 func (r *SecurityGroupReconciler) securityGroupReconcile(securityGroup *networkv1alpha1.SecurityGroup) error {
-	if securityGroup.Status.Status == nil || *securityGroup.Status.Status == "" {
-		*securityGroup.Status.Status = "PROCESSING"
-		_ = r.Update(context.TODO(), securityGroup)
+	// always check for finalizers
+	deleted := !securityGroup.GetDeletionTimestamp().IsZero()
+	pendingFinalizers := securityGroup.GetFinalizers()
+	finalizerExists := len(pendingFinalizers) > 0
+	if !finalizerExists && !deleted && !utils.Contains(pendingFinalizers, common.Finalizer) {
+		log.Println("Adding finalized &s to resource", common.Finalizer)
+		finalizers := append(pendingFinalizers, common.Finalizer)
+		securityGroup.SetFinalizers(finalizers)
+		err := r.Update(context.TODO(), securityGroup)
+		if err != nil {
+			return err
+		}
+	}
+	if securityGroup.Status.ResourceStatus.Status == nil || *securityGroup.Status.ResourceStatus.Status == "" {
+		*securityGroup.Status.ResourceStatus.Status = "PROCESSING"
+		return r.Update(context.TODO(), securityGroup)
+
+	}
+	if *securityGroup.Status.ResourceStatus.Status == "PROCESSING" {
 		return r.createSecurityGroup(securityGroup)
-	} else if *securityGroup.Status.Status == "PROCESSING" {
-		log.Printf("SecurityGroup %s is in PROCESSING status, ignore", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
-	} else if *securityGroup.Status.Status == "PENDING" {
-		log.Printf("SecurityGroup %s is in PENDING status, ignore for now", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
-	} else if *securityGroup.Status.Status == "ERROR" {
-		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *securityGroup.Status.LastRetry)
-		//only retry 10 times, only retry every 1 minute
-		if *securityGroup.Status.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
-			if securityGroup.Status.SecurityGroupStatus.SecurityGroupId == nil || *securityGroup.Status.SecurityGroupStatus.SecurityGroupId == "" {
-				return r.createSecurityGroup(securityGroup)
-			} else {
-				return r.checkSecurityGroupStatus(securityGroup)
+	}
+	log.Printf("subnet %s is in %s status", *securityGroup.Spec.SecurityGroup.SecurityGroupName, *securityGroup.Status.ResourceStatus.Status)
+	tencentSecurityGroup, err := r.getSecurityGroup(securityGroup)
+	if err != nil {
+		log.Printf("error retrive subnet %s status from tencent cloud, just requeue for retry", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
+		return err
+	}
+	if deleted {
+		if !strings.EqualFold(*securityGroup.Status.ResourceStatus.Status, "DELETING") {
+			*securityGroup.Status.ResourceStatus.Status = "DELETING"
+			err := r.Update(context.TODO(), securityGroup)
+			if err != nil {
+				return err
 			}
 		}
-		log.Println("not retrying for SecurityGroup:", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
-	} else if *securityGroup.Status.Status == "READY" {
-		log.Printf("SecurityGroup %s is in READY status, check the status from tencnet cloud", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
-		return r.checkSecurityGroupStatus(securityGroup)
+		// resource is marked to be deleted, cloud resource still exists
+		if tencentSecurityGroup != nil {
+			err = r.deleteSecurityGroup(securityGroup)
+			if err != nil {
+				r.Log.Error(err, "error delete security group", "namespace:", securityGroup.Namespace, "name:", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
+				//error delete the resource from cloud, don't remove finalizer yet
+				return nil
+			}
+		}
+		// resource deleted from cloud, remove finalizer
+		finalizers := make([]string, 0)
+		pendingFinalizers = securityGroup.GetFinalizers()
+		for _, pendingFinalizer := range pendingFinalizers {
+			if pendingFinalizer != common.Finalizer {
+				finalizers = append(finalizers, pendingFinalizer)
+			}
+		}
+		securityGroup.SetFinalizers(finalizers)
+		return r.Update(context.TODO(), securityGroup)
+	}
+	if strings.EqualFold(*securityGroup.Status.ResourceStatus.Status, "PENDING") || strings.EqualFold(*securityGroup.Status.ResourceStatus.Status, "ERROR") {
+		log.Printf("subnet %s is in  status, retry", *securityGroup.Spec.SecurityGroup.SecurityGroupName)
+		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *securityGroup.Status.ResourceStatus.LastRetry)
+		//only retry 10 times, only retry every 1 minute
+		if *securityGroup.Status.ResourceStatus.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
+			if securityGroup.Status.SecurityGroupStatus.SecurityGroupId == nil || *securityGroup.Status.SecurityGroupStatus.SecurityGroupId == "" {
+				return r.createSecurityGroup(securityGroup)
+			}
+		}
+	}
+	// resource deleted in cloud, update the status
+	if tencentSecurityGroup == nil {
+		if strings.EqualFold(*securityGroup.Status.ResourceStatus.Status, "READY") {
+			*securityGroup.Status.ResourceStatus.RetryCount = 0
+			*securityGroup.Status.ResourceStatus.LastRetry = ""
+			*securityGroup.Status.ResourceStatus.Code = ""
+			*securityGroup.Status.ResourceStatus.Reason = "security group deleted in cloud"
+			*securityGroup.Status.ResourceStatus.Status = "ERROR"
+			return r.Update(context.TODO(), securityGroup)
+		}
+		return nil
+	}
+	// resource found in cloud, not marked as deleted, try sync the security group rules first
+	err = r.syncSecurityGroupPolicySet(securityGroup)
+	if err != nil {
+		log.Println("failed to sync security group policy status from tencent cloud, requeue")
+		//we get the security group from tencent cloud, but we can't sync security group rules , ignore the security group
+		return err
+	}
+	// security group rule sync success, update status
+	if !reflect.DeepEqual(securityGroup.Status.SecurityGroupStatus, tencentSecurityGroup) || !strings.EqualFold(*securityGroup.Status.ResourceStatus.Status, "READY") {
+		*securityGroup.Status.SecurityGroupStatus = *tencentSecurityGroup
+		*securityGroup.Status.ResourceStatus.RetryCount = 0
+		*securityGroup.Status.ResourceStatus.LastRetry = ""
+		*securityGroup.Status.ResourceStatus.Code = ""
+		*securityGroup.Status.ResourceStatus.Reason = ""
+		*securityGroup.Status.ResourceStatus.Status = "READY"
+		return r.Update(context.TODO(), securityGroup)
 	}
 	return nil
 }
@@ -157,7 +223,7 @@ func (r *SecurityGroupReconciler) createSecurityGroup(securityGroup *networkv1al
 		log.Println("error create tencent cloud SecurityGroupPolicySet, err:", err)
 		return err
 	}
-	*securityGroup.Status.Status = "READY"
+	*securityGroup.Status.ResourceStatus.Status = "READY"
 	err = r.Update(context.TODO(), securityGroup)
 	if err != nil {
 		log.Println("error update vpc status")
@@ -166,42 +232,38 @@ func (r *SecurityGroupReconciler) createSecurityGroup(securityGroup *networkv1al
 	return nil
 }
 
-func (r *SecurityGroupReconciler) checkSecurityGroupStatus(securityGroup *networkv1alpha1.SecurityGroup) error {
+func (r *SecurityGroupReconciler) getSecurityGroup(securityGroup *networkv1alpha1.SecurityGroup) (*tcvpc.SecurityGroup, error) {
+	//cloud resource is not created, return nil
+	if securityGroup.Status.SecurityGroupStatus.SecurityGroupId == nil || *securityGroup.Status.SecurityGroupStatus.SecurityGroupId == "" {
+		return nil, nil
+	}
 	tencentClient, _ := tcvpc.NewClient(common.GerCredential(), *securityGroup.Spec.Region, profile.NewClientProfile())
 	request := tcvpc.NewDescribeSecurityGroupsRequest()
 	request.SecurityGroupIds = append(request.SecurityGroupIds, securityGroup.Status.SecurityGroupStatus.SecurityGroupId)
 	resp, err := tencentClient.DescribeSecurityGroups(request)
 	if err != nil {
-		log.Println("failed to get subnet from tencent cloud, requeue")
-		*securityGroup.Status.RetryCount++
-		*securityGroup.Status.Reason = err.Error()
-		if *securityGroup.Status.RetryCount > 10 {
-			return err
-		}
-		return nil
+		log.Println("failed to get securityGroup from tencent cloud, requeue")
+		return nil, err
 	}
 	if *resp.Response.TotalCount == 0 {
 		log.Println("Resource is deleted from cloud, update status")
-		*securityGroup.Status.Status = "DELETED_IN_CLOUD"
-		err := r.Update(context.Background(), securityGroup)
-		if err != nil {
-			log.Println("error update DELETED_IN_CLOUD")
-		}
+		return nil, nil
 	}
-	err = r.syncSecurityGroupPolicySet(securityGroup)
-	if err != nil {
-		log.Println("failed to check security group policy status from tencent cloud, requeue")
-		*securityGroup.Status.RetryCount++
-		*securityGroup.Status.Reason = err.Error()
-		if *securityGroup.Status.RetryCount > 10 {
-			return err
-		}
+	return resp.Response.SecurityGroupSet[0], nil
+}
+
+func (r *SecurityGroupReconciler) deleteSecurityGroup(securityGroup *networkv1alpha1.SecurityGroup) error {
+	if securityGroup.Status.SecurityGroupStatus.SecurityGroupId == nil || *securityGroup.Status.SecurityGroupStatus.SecurityGroupId == "" {
 		return nil
 	}
-	*securityGroup.Status.RetryCount = 0
-	*securityGroup.Status.LastRetry = ""
-	*securityGroup.Status.Code = ""
-	*securityGroup.Status.Reason = ""
+	tencentClient, _ := tcvpc.NewClient(common.GerCredential(), *securityGroup.Spec.Region, profile.NewClientProfile())
+	request := tcvpc.NewDeleteSecurityGroupRequest()
+	request.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
+	_, err := tencentClient.DeleteSecurityGroup(request)
+	if err != nil {
+		log.Println("failed to delete securityGroup from tencent cloud, requeue")
+		return err
+	}
 	return nil
 }
 
@@ -214,37 +276,63 @@ func (r *SecurityGroupReconciler) syncSecurityGroupPolicySet(securityGroup *netw
 		return err
 	}
 	//sync policy
-	insertPolicyRequest := tcvpc.NewCreateSecurityGroupPoliciesRequest()
-	insertPolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
-	insertPolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
-	replacePolicyRequest := tcvpc.NewReplaceSecurityGroupPolicyRequest()
-	replacePolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
-	replacePolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
-	deletePolicyRequest := tcvpc.NewDeleteSecurityGroupPoliciesRequest()
-	deletePolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
-	deletePolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
 	insertPolicySet, replacePolicySet, deletePolicySet := diffSecurityGroupPolicySet(resp.Response.SecurityGroupPolicySet, securityGroup.Spec.SecurityGroupPolicySet)
-	if len(replacePolicySet.Ingress) != 0 || len(replacePolicySet.Egress) != 0 {
-		replacePolicyRequest.SecurityGroupPolicySet = replacePolicySet
-		_, err := tencentClient.ReplaceSecurityGroupPolicy(replacePolicyRequest)
-		if err != nil {
-			return err
-		}
-	}
-	if len(insertPolicySet.Ingress) != 0 || len(insertPolicySet.Egress) != 0 {
-		insertPolicyRequest.SecurityGroupPolicySet = insertPolicySet
-		_, err := tencentClient.CreateSecurityGroupPolicies(insertPolicyRequest)
-		if err != nil {
-			return err
-		}
-	}
 	if len(deletePolicySet.Ingress) != 0 || len(deletePolicySet.Egress) != 0 {
+		deletePolicyRequest := tcvpc.NewDeleteSecurityGroupPoliciesRequest()
+		deletePolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
+		deletePolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
 		deletePolicyRequest.SecurityGroupPolicySet = deletePolicySet
 		_, err := tencentClient.DeleteSecurityGroupPolicies(deletePolicyRequest)
 		if err != nil {
 			return err
 		}
 	}
+	if len(insertPolicySet.Ingress) != 0 {
+		insertIngressPolicyRequest := tcvpc.NewCreateSecurityGroupPoliciesRequest()
+		insertIngressPolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
+		insertIngressPolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
+		*insertIngressPolicyRequest.SecurityGroupPolicySet = *insertPolicySet
+		insertIngressPolicyRequest.SecurityGroupPolicySet.Egress = nil
+		_, err := tencentClient.CreateSecurityGroupPolicies(insertIngressPolicyRequest)
+		if err != nil {
+			return err
+		}
+	}
+	if len(insertPolicySet.Egress) != 0 {
+		insertEgressPolicyRequest := tcvpc.NewCreateSecurityGroupPoliciesRequest()
+		insertEgressPolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
+		insertEgressPolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
+		*insertEgressPolicyRequest.SecurityGroupPolicySet = *insertPolicySet
+		insertEgressPolicyRequest.SecurityGroupPolicySet.Ingress = nil
+		_, err := tencentClient.CreateSecurityGroupPolicies(insertEgressPolicyRequest)
+		if err != nil {
+			return err
+		}
+	}
+	if len(replacePolicySet.Ingress) != 0 {
+		replaceIngressPolicyRequest := tcvpc.NewReplaceSecurityGroupPolicyRequest()
+		replaceIngressPolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
+		replaceIngressPolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
+		replaceIngressPolicyRequest.SecurityGroupPolicySet = replacePolicySet
+		replaceIngressPolicyRequest.SecurityGroupPolicySet.Egress = nil
+		_, err := tencentClient.ReplaceSecurityGroupPolicy(replaceIngressPolicyRequest)
+		if err != nil {
+			return err
+		}
+	}
+	if len(replacePolicySet.Egress) != 0 {
+		replaceEgressPolicyRequest := tcvpc.NewReplaceSecurityGroupPolicyRequest()
+		replaceEgressPolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
+		replaceEgressPolicyRequest.SecurityGroupId = securityGroup.Status.SecurityGroupStatus.SecurityGroupId
+		replaceEgressPolicyRequest.SecurityGroupPolicySet = new(tcvpc.SecurityGroupPolicySet)
+		replaceEgressPolicyRequest.SecurityGroupPolicySet = replacePolicySet
+		replaceEgressPolicyRequest.SecurityGroupPolicySet.Ingress = nil
+		_, err := tencentClient.ReplaceSecurityGroupPolicy(replaceEgressPolicyRequest)
+		if err != nil {
+			return err
+		}
+	}
+
 	//after the policy sync complete, get the policies again
 	resp, err = tencentClient.DescribeSecurityGroupPolicies(request)
 	if err != nil {
@@ -278,7 +366,7 @@ func diffSecurityGroupPolicySet(policy *tcvpc.SecurityGroupPolicySet, spec *tcvp
 			continue
 		}
 		//if the policy we get from cloud dose not match spec, replace the policy
-		if strings.EqualFold(*policy.Ingress[index].CidrBlock, *ingress.CidrBlock) || strings.EqualFold(*policy.Ingress[index].Port, *ingress.Port) || strings.EqualFold(*policy.Ingress[index].Action, *ingress.Action) || strings.EqualFold(*policy.Ingress[index].Protocol, *ingress.Protocol) || *policy.Ingress[index].PolicyDescription != *ingress.PolicyDescription {
+		if !strings.EqualFold(*policy.Ingress[index].CidrBlock, *ingress.CidrBlock) || !strings.EqualFold(*policy.Ingress[index].Port, *ingress.Port) || !strings.EqualFold(*policy.Ingress[index].Action, *ingress.Action) || !strings.EqualFold(*policy.Ingress[index].Protocol, *ingress.Protocol) || *policy.Ingress[index].PolicyDescription != *ingress.PolicyDescription {
 			ingress.PolicyIndex = new(int64)
 			*ingress.PolicyIndex = int64(index)
 			replacePolicySet.Ingress = append(replacePolicySet.Ingress, ingress)
@@ -290,7 +378,7 @@ func diffSecurityGroupPolicySet(policy *tcvpc.SecurityGroupPolicySet, spec *tcvp
 			insertPolicySet.Egress = append(insertPolicySet.Egress, egress)
 			continue
 		}
-		if strings.EqualFold(*policy.Egress[index].CidrBlock, *egress.CidrBlock) || strings.EqualFold(*policy.Egress[index].Port, *egress.Port) || strings.EqualFold(*policy.Egress[index].Action, *egress.Action) || strings.EqualFold(*policy.Egress[index].Protocol, *egress.Protocol) || *policy.Egress[index].PolicyDescription != *egress.PolicyDescription {
+		if !strings.EqualFold(*policy.Egress[index].CidrBlock, *egress.CidrBlock) || !strings.EqualFold(*policy.Egress[index].Port, *egress.Port) || !strings.EqualFold(*policy.Egress[index].Action, *egress.Action) || !strings.EqualFold(*policy.Egress[index].Protocol, *egress.Protocol) || *policy.Egress[index].PolicyDescription != *egress.PolicyDescription {
 			egress.PolicyIndex = new(int64)
 			*egress.PolicyIndex = int64(index)
 			replacePolicySet.Egress = append(replacePolicySet.Egress, egress)

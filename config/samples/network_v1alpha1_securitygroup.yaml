@@ -16,18 +16,18 @@ spec:
     Ingress:
       - Protocol: TCP
         Port: '443'
-        CidrBlock: 10.0.0.0/16
+        CidrBlock: 0.0.0.0/0
         Action: ACCEPT
         PolicyDescription: duliyang ingress test policy
-      - Protocol: TCP
+      - Protocol: UDP
         Port: '443'
-        CidrBlock: 10.1.0.0/16
+        CidrBlock: 0.0.0.0/0
         Action: ACCEPT
         PolicyDescription: duliyang ingress test
     Egress:
       - Protocol: TCP
         Port: all
-        CidrBlock: 10.0.0.0/16
+        CidrBlock: 0.0.0.0/0
         Action: ACCEPT
         PolicyDescription: duliyang egress test policy
 

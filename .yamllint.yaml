@@ -11,9 +11,6 @@ yaml-files:
   - OWNERS
 
 ignore: |
-  # TODO(SVP-230): ignore forked copy of https://github.com/googleforgames/agones/blob/v1.1.0/install/yaml/install.yaml
-  # until we have a better way to vendor and customise upstream includes
-  # Ignore helm templates as they aren't valid yaml until generated
   charts/**/templates/*.yaml
   charts/**/templates/*/*.yaml
 

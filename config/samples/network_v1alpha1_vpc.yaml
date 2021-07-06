@@ -12,5 +12,3 @@ spec:
   tags:
     - key: tag1
       value: value1
----
-...

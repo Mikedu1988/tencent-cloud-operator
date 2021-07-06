@@ -26,7 +26,9 @@ import (
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/log/zap"
 
+	computev1alpha1 "tencent-cloud-operator/apis/compute/v1alpha1"
 	networkv1alpha1 "tencent-cloud-operator/apis/network/v1alpha1"
+	computecontroller "tencent-cloud-operator/controllers/compute"
 	networkcontroller "tencent-cloud-operator/controllers/network"
 	// +kubebuilder:scaffold:imports
 )
@@ -40,6 +42,7 @@ func init() {
 	_ = clientgoscheme.AddToScheme(scheme)
 
 	_ = networkv1alpha1.AddToScheme(scheme)
+	_ = computev1alpha1.AddToScheme(scheme)
 	// +kubebuilder:scaffold:scheme
 }
 
@@ -92,6 +95,22 @@ func main() {
 		Scheme: mgr.GetScheme(),
 	}).SetupWithManager(mgr); err != nil {
 		setupLog.Error(err, "unable to create controller", "controller", "SecurityGroup")
+		os.Exit(1)
+	}
+	if err = (&computecontroller.ManagedClusterReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("ManagedCluster"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "ManagedCluster")
+		os.Exit(1)
+	}
+	if err = (&computecontroller.NodePoolReconciler{
+		Client: mgr.GetClient(),
+		Log:    ctrl.Log.WithName("controllers").WithName("NodePool"),
+		Scheme: mgr.GetScheme(),
+	}).SetupWithManager(mgr); err != nil {
+		setupLog.Error(err, "unable to create controller", "controller", "NodePool")
 		os.Exit(1)
 	}
 	// +kubebuilder:scaffold:builder

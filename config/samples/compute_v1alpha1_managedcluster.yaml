@@ -1,0 +1,88 @@
+apiVersion: compute.tencentcloud.kubecooler.com/v1alpha1
+kind: ManagedCluster
+metadata:
+  name: tke-duliyang-cluster
+spec:
+  region: ap-shanghai
+  vpcRef:
+    name: vpc-duliyang
+  cluster:
+    ClusterName: tke-duliyang-cluster
+    ClusterDescription: tke-duliyang-cluster
+    ClusterOs: "ubuntu18.04.1x86_64"
+    ClusterType: "MANAGED_CLUSTER"
+    ClusterVersion: "1.18.4"
+    ClusterNetworkSettings:
+      ClusterCIDR: "10.128.0.0/10"
+
+
+#  // ManagedClusterSpec defines the desired state of ManagedCluster
+#  type ManagedClusterSpec struct {
+#  Region  *string                 `json:"region,omitempty"`
+#  Cluster *tctke.Cluster          `json:"cluster,omitempty"`
+#  VpcRef  *networkv1alpha1.VpcRef `json:"vpcRef,omitempty"`
+#}
+#
+#  type Cluster struct {
+#
+#  // 集群ID
+#  ClusterId *string `json:"ClusterId,omitempty" name:"ClusterId"`
+#
+#  // 集群名称
+#  ClusterName *string `json:"ClusterName,omitempty" name:"ClusterName"`
+#
+#  // 集群描述
+#  ClusterDescription *string `json:"ClusterDescription,omitempty" name:"ClusterDescription"`
+#
+#  // 集群版本（默认值为1.10.5）
+#  ClusterVersion *string `json:"ClusterVersion,omitempty" name:"ClusterVersion"`
+#
+#  // 集群系统。centos7.2x86_64 或者 ubuntu16.04.1 LTSx86_64，默认取值为ubuntu16.04.1 LTSx86_64
+#  ClusterOs *string `json:"ClusterOs,omitempty" name:"ClusterOs"`
+#
+#  // 集群类型，托管集群：MANAGED_CLUSTER，独立集群：INDEPENDENT_CLUSTER。
+#  ClusterType *string `json:"ClusterType,omitempty" name:"ClusterType"`
+#
+#  // 集群网络相关参数
+#  ClusterNetworkSettings *ClusterNetworkSettings `json:"ClusterNetworkSettings,omitempty" name:"ClusterNetworkSettings"`
+#
+#  // 集群当前node数量
+#  ClusterNodeNum *uint64 `json:"ClusterNodeNum,omitempty" name:"ClusterNodeNum"`
+#
+#  // 集群所属的项目ID
+#  ProjectId *uint64 `json:"ProjectId,omitempty" name:"ProjectId"`
+#
+#  // 标签描述列表。
+#  // 注意：此字段可能返回 null，表示取不到有效值。
+#  TagSpecification []*TagSpecification `json:"TagSpecification,omitempty" name:"TagSpecification" list`
+#
+#  // 集群状态 (Running 运行中  Creating 创建中 Abnormal 异常  )
+#  ClusterStatus *string `json:"ClusterStatus,omitempty" name:"ClusterStatus"`
+#
+#  // 集群属性(包括集群不同属性的MAP，属性字段包括NodeNameType (lan-ip模式和hostname 模式，默认无lan-ip模式))
+#  // 注意：此字段可能返回 null，表示取不到有效值。
+#  Property *string `json:"Property,omitempty" name:"Property"`
+#
+#  // 集群当前master数量
+#  ClusterMaterNodeNum *uint64 `json:"ClusterMaterNodeNum,omitempty" name:"ClusterMaterNodeNum"`
+#
+#  // 集群使用镜像id
+#  // 注意：此字段可能返回 null，表示取不到有效值。
+#  ImageId *string `json:"ImageId,omitempty" name:"ImageId"`
+#
+#  // OsCustomizeType 系统定制类型
+#  // 注意：此字段可能返回 null，表示取不到有效值。
+#  OsCustomizeType *string `json:"OsCustomizeType,omitempty" name:"OsCustomizeType"`
+#
+#  // 集群运行环境docker或container
+#  // 注意：此字段可能返回 null，表示取不到有效值。
+#  ContainerRuntime *string `json:"ContainerRuntime,omitempty" name:"ContainerRuntime"`
+#
+#  // 创建时间
+#  // 注意：此字段可能返回 null，表示取不到有效值。
+#  CreatedTime *string `json:"CreatedTime,omitempty" name:"CreatedTime"`
+#
+#  // 删除保护开关
+#  // 注意：此字段可能返回 null，表示取不到有效值。
+#  DeletionProtection *bool `json:"DeletionProtection,omitempty" name:"DeletionProtection"`
+#}
