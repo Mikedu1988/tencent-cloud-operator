@@ -12,3 +12,9 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-message: 'Thanks for your issue, we will look into thi issue '
           pr-message: Thanks for your pr, we will look into thi pr
+  pre-commit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+      - uses: pre-commit/action@v2.0.3
