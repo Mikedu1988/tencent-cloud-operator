@@ -335,7 +335,7 @@ func (r *NodePoolReconciler) getConfigPraStr(nodePool *computev1alpha1.NodePool)
 		autoScaleConfig.SubnetIds = append(autoScaleConfig.SubnetIds, subnet.Status.Subnet.SubnetId)
 	}
 	autoScaleConfig.SubnetRef = nil
-	autoScaleParaStr, err := json.Marshal(autoScaleConfig)
+	autoScaleParaStr, _ := json.Marshal(autoScaleConfig)
 	launchConfig := nodePool.Spec.LaunchConfig.DeepCopy()
 	for _, securityGroupRef := range nodePool.Spec.LaunchConfig.SecurityGroupRef {
 		securityGroupRequest := types.NamespacedName{
@@ -354,7 +354,7 @@ func (r *NodePoolReconciler) getConfigPraStr(nodePool *computev1alpha1.NodePool)
 		launchConfig.SecurityGroupIds = append(launchConfig.SecurityGroupIds, securityGroup.Status.SecurityGroupStatus.SecurityGroupId)
 	}
 	launchConfig.SecurityGroupRef = nil
-	launchConfigParaStr, err := json.Marshal(launchConfig)
+	launchConfigParaStr, _ := json.Marshal(launchConfig)
 	autoScaleGroupPara = new(string)
 	launchConfigPara = new(string)
 	*autoScaleGroupPara = string(autoScaleParaStr)

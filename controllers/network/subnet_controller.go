@@ -162,7 +162,7 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 	//resource not marked as deleted, and in PENDING, ERROR status
 	if strings.EqualFold(*subnet.Status.ResourceStatus.Status, "PENDING") || strings.EqualFold(*subnet.Status.ResourceStatus.Status, "ERROR") {
 		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *subnet.Status.ResourceStatus.LastRetry)
-		log.Println("time since:",time.Since(lastRetried))
+		log.Println("time since:", time.Since(lastRetried))
 		//only retry 10 times, only retry every 1 minute
 		if *subnet.Status.ResourceStatus.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
 			log.Printf("subnet %s is in  status, retry", *subnet.Spec.Subnet.SubnetName)

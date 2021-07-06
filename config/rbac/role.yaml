@@ -1,108 +1,107 @@
-
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
-  creationTimestamp: null
+  creationTimestamp:
   name: manager-role
 rules:
-- apiGroups:
-  - compute.tencentcloud.kubecooler.com
-  resources:
-  - managedclusters
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - compute.tencentcloud.kubecooler.com
-  resources:
-  - managedclusters/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - compute.tencentcloud.kubecooler.com
-  resources:
-  - nodepools
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - compute.tencentcloud.kubecooler.com
-  resources:
-  - nodepools/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - securitygroups
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - securitygroups/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - subnets
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - subnets/status
-  verbs:
-  - get
-  - patch
-  - update
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - vpcs
-  verbs:
-  - create
-  - delete
-  - get
-  - list
-  - patch
-  - update
-  - watch
-- apiGroups:
-  - network.tencentcloud.kubecooler.com
-  resources:
-  - vpcs/status
-  verbs:
-  - get
-  - patch
-  - update
+  - apiGroups:
+      - compute.tencentcloud.kubecooler.com
+    resources:
+      - managedclusters
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - compute.tencentcloud.kubecooler.com
+    resources:
+      - managedclusters/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - compute.tencentcloud.kubecooler.com
+    resources:
+      - nodepools
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - compute.tencentcloud.kubecooler.com
+    resources:
+      - nodepools/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - securitygroups
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - securitygroups/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - subnets
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - subnets/status
+    verbs:
+      - get
+      - patch
+      - update
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - vpcs
+    verbs:
+      - create
+      - delete
+      - get
+      - list
+      - patch
+      - update
+      - watch
+  - apiGroups:
+      - network.tencentcloud.kubecooler.com
+    resources:
+      - vpcs/status
+    verbs:
+      - get
+      - patch
+      - update

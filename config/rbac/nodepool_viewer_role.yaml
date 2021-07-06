@@ -1,20 +1,21 @@
+---
 # permissions for end users to view nodepools.
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
 metadata:
   name: nodepool-viewer-role
 rules:
-- apiGroups:
-  - compute.tencentcloud.kubecooler.com
-  resources:
-  - nodepools
-  verbs:
-  - get
-  - list
-  - watch
-- apiGroups:
-  - compute.tencentcloud.kubecooler.com
-  resources:
-  - nodepools/status
-  verbs:
-  - get
+  - apiGroups:
+      - compute.tencentcloud.kubecooler.com
+    resources:
+      - nodepools
+    verbs:
+      - get
+      - list
+      - watch
+  - apiGroups:
+      - compute.tencentcloud.kubecooler.com
+    resources:
+      - nodepools/status
+    verbs:
+      - get

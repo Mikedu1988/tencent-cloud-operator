@@ -1,3 +1,4 @@
+---
 apiVersion: compute.tencentcloud.kubecooler.com/v1alpha1
 kind: ManagedCluster
 metadata:
@@ -9,11 +10,11 @@ spec:
   cluster:
     ClusterName: tke-duliyang-cluster
     ClusterDescription: tke-duliyang-cluster
-    ClusterOs: "ubuntu18.04.1x86_64"
-    ClusterType: "MANAGED_CLUSTER"
-    ClusterVersion: "1.18.4"
+    ClusterOs: ubuntu18.04.1x86_64
+    ClusterType: MANAGED_CLUSTER
+    ClusterVersion: 1.18.4
     ClusterNetworkSettings:
-      ClusterCIDR: "10.128.0.0/10"
+      ClusterCIDR: 10.128.0.0/10
 
 
 #  // ManagedClusterSpec defines the desired state of ManagedCluster

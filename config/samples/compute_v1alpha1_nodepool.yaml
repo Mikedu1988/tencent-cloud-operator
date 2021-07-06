@@ -1,10 +1,11 @@
+---
 apiVersion: compute.tencentcloud.kubecooler.com/v1alpha1
 kind: NodePool
 metadata:
   name: tke-duliyang-nodepool
 spec:
-  region: "ap-shanghai"
-  name: "game-node-pool"
+  region: ap-shanghai
+  name: game-node-pool
   enableAutoScale: true
   labels:
     - Name: type
@@ -13,29 +14,29 @@ spec:
     - Key: node-pool-name
       Value: game-node-pool
       Effect: NoSchedule
-  nodePoolOs: "ubuntu18.04.1x86_64"
-  osCustomizeType: "GENERAL"
+  nodePoolOs: ubuntu18.04.1x86_64
+  osCustomizeType: GENERAL
   clusterRef:
-    name: "tke-duliyang-cluster"
+    name: tke-duliyang-cluster
   vpcRef:
-    name: "vpc-duliyang"
+    name: vpc-duliyang
   autoScalingConfig:
     DesiredCapacity: 1
     MaxSize: 3
     MinSize: 0
     SubnetRef:
-      - name: "subnet-duliyang-2"
-    RetryPolicy: "INCREMENTAL_INTERVALS"
+      - name: subnet-duliyang-2
+    RetryPolicy: INCREMENTAL_INTERVALS
   launchConfig:
-    InstanceType: "SA2.SMALL1"
+    InstanceType: SA2.SMALL1
     SecurityGroupRef:
-      - name: "securitygroup-duliyang-1"
+      - name: securitygroup-duliyang-1
     LoginSettings:
       KeyIds:
-        - "skey-8i33db81"
+        - skey-8i33db81
     InternetAccessible:
       PublicIpAssigned: true
-      InterNetChargeType: "TRAFFIC_POSTPAID_BY_HOUR"
+      InterNetChargeType: TRAFFIC_POSTPAID_BY_HOUR
       InternetMaxBandwidthOut: 100
     EnhancedService:
       SecurityService:
