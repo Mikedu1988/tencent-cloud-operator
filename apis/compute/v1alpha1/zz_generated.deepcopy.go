@@ -69,8 +69,8 @@ func (in *AutoScalingGroup) DeepCopyInto(out *AutoScalingGroup) {
 			}
 		}
 	}
-	if in.VpcId != nil {
-		in, out := &in.VpcId, &out.VpcId
+	if in.VpcID != nil {
+		in, out := &in.VpcID, &out.VpcID
 		*out = new(string)
 		**out = **in
 	}

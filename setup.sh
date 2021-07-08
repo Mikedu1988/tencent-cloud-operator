@@ -29,5 +29,7 @@ log_info "Running direnv allow."
 log_action "ACTION REQUIRED: Please inspect .envrc to make sure you understand how your environment is being modified."
 direnv allow
 
+log_info "Setting origin/HEAD to master (this is required by pre-commit)."
+git remote set-head "origin" --auto
 
 workflow/config/setup-tools.sh

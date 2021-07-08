@@ -19,13 +19,14 @@ package v1alpha1
 import (
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"tencent-cloud-operator/internal/common"
 )
 
 // EDIT THIS FILE!  THIS IS SCAFFOLDING FOR YOU TO OWN!
 // NOTE: json tags are required.  Any new fields you add must have json tags for the fields to be serialized.
 
-//// SubnetSpec defines the desired state of Subnet
+// SubnetSpec defines the desired state of Subnet
 type SubnetSpec struct {
 	// INSERT ADDITIONAL SPEC FIELDS - desired state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
@@ -50,11 +51,11 @@ type SubnetStatus struct {
 	Vpc            *tcvpc.Vpc             `json:"vpc,omitempty"`
 }
 
+// Subnet is the Schema for the subnets API
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="SubNetId",type=string,JSONPath=`.status.subnet.SubnetId`
 // +kubebuilder:printcolumn:name="VpcId",type=string,JSONPath=`.status.vpc.VpcId`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.resourceStatus.status`
-// Subnet is the Schema for the subnets API
 type Subnet struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`

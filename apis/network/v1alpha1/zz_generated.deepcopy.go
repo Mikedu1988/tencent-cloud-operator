@@ -304,8 +304,8 @@ func (in *VpcSpec) DeepCopyInto(out *VpcSpec) {
 		*out = new(string)
 		**out = **in
 	}
-	if in.DnsServers != nil {
-		in, out := &in.DnsServers, &out.DnsServers
+	if in.DNSServers != nil {
+		in, out := &in.DNSServers, &out.DNSServers
 		*out = make([]*string, len(*in))
 		for i := range *in {
 			if (*in)[i] != nil {

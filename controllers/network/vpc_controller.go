@@ -18,12 +18,13 @@ package controllers
 
 import (
 	"context"
-	"k8s.io/client-go/tools/record"
-	"log"
 	"strings"
+	"time"
+
 	"tencent-cloud-operator/internal/common"
 	"tencent-cloud-operator/internal/utils"
-	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -33,7 +34,6 @@ import (
 	"sigs.k8s.io/controller-runtime/pkg/predicate"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,33 +44,32 @@ import (
 // VpcReconciler reconciles a Vpc object
 type VpcReconciler struct {
 	client.Client
-	Log      logr.Logger
-	Scheme   *runtime.Scheme
-	Recorder *record.EventRecorder
+	Log    *log.Logger
+	Scheme *runtime.Scheme
 }
 
+//Reconcile start reconcile loop
 // +kubebuilder:rbac:groups=network.tencentcloud.kubecooler.com,resources=vpcs,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=network.tencentcloud.kubecooler.com,resources=vpcs/status,verbs=get;update;patch
-
 func (r *VpcReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("vpc", req.String())
+	r.Log.Info("vpc", req.String())
 	ctx := context.Background()
 	// get the vpc object
 	vpc := &networkv1alpha1.Vpc{}
 	err := r.Get(ctx, req.NamespacedName, vpc)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Printf("Request object not found, could have been deleted after reconcile request.")
+			r.Log.Infof("Request object not found, could have been deleted after reconcile request.")
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		log.Println("error reading the object, requeue")
+		r.Log.Info("error reading the object, requeue")
 		return ctrl.Result{}, err
 	}
 
-	log.Println("found the vpc", *vpc.Spec.VpcName)
+	r.Log.Info("found the vpc", *vpc.Spec.VpcName)
 	if vpc.Status.ResourceStatus == nil {
 		vpc.Status.ResourceStatus = new(common.ResourceStatus)
 		vpc.Status.ResourceStatus.Status = new(string)
@@ -79,14 +78,14 @@ func (r *VpcReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		vpc.Status.ResourceStatus.Code = new(string)
 		vpc.Status.ResourceStatus.LastRetry = new(string)
 	}
-	if vpc.Status.VpcId == nil {
-		vpc.Status.VpcId = new(string)
+	if vpc.Status.VpcID == nil {
+		vpc.Status.VpcID = new(string)
 	}
 	err = r.vpcReconcile(vpc)
 	if err != nil {
 		*vpc.Status.ResourceStatus.Status = "ERROR"
 		*vpc.Status.ResourceStatus.LastRetry = time.Now().UTC().Format("2006-01-02T15:04:05")
-		*vpc.Status.ResourceStatus.RetryCount += 1
+		*vpc.Status.ResourceStatus.RetryCount++
 		if cloudError, ok := err.(*tcerrors.TencentCloudSDKError); ok {
 			*vpc.Status.ResourceStatus.Code = cloudError.Code
 			*vpc.Status.ResourceStatus.Reason = cloudError.Message
@@ -103,7 +102,7 @@ func (r *VpcReconciler) vpcReconcile(vpc *networkv1alpha1.Vpc) error {
 	pendingFinalizers := vpc.GetFinalizers()
 	finalizerExists := len(pendingFinalizers) > 0
 	if !finalizerExists && !deleted && !utils.Contains(pendingFinalizers, common.Finalizer) {
-		log.Println("Adding finalized &s to resource", common.Finalizer)
+		r.Log.Info("Adding finalized &s to resource", common.Finalizer)
 		finalizers := append(pendingFinalizers, common.Finalizer)
 		vpc.SetFinalizers(finalizers)
 		return r.Update(context.TODO(), vpc)
@@ -115,11 +114,11 @@ func (r *VpcReconciler) vpcReconcile(vpc *networkv1alpha1.Vpc) error {
 	if *vpc.Status.ResourceStatus.Status == "PROCESSING" {
 		return r.createVpc(vpc)
 	}
-	log.Printf("vpc %s is in %s status", *vpc.Spec.VpcName, *vpc.Status.ResourceStatus.Status)
+	r.Log.Infof("vpc %s is in %s status", *vpc.Spec.VpcName, *vpc.Status.ResourceStatus.Status)
 	tencentVpc, err := r.getVpc(vpc)
 	// err get resource from cloud, and resource not marked as deleted, something wrong
 	if err != nil {
-		log.Printf("error retrive vpc %s status from tencent cloud, just requeue for retry", *vpc.Spec.VpcName)
+		r.Log.Infof("error retrieve vpc %s status from tencent cloud, just requeue for retry", *vpc.Spec.VpcName)
 		return err
 	}
 	if deleted {
@@ -158,7 +157,7 @@ func (r *VpcReconciler) vpcReconcile(vpc *networkv1alpha1.Vpc) error {
 		//only retry 10 times, only retry every 1 minute
 		if *vpc.Status.ResourceStatus.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
 			// resource in error status, retry create
-			if vpc.Status.VpcId == nil || *vpc.Status.VpcId == "" {
+			if vpc.Status.VpcID == nil || *vpc.Status.VpcID == "" {
 				r.Log.Info("vpc is in error status, and vpc id is empty, retry create")
 				return r.createVpc(vpc)
 			}
@@ -178,7 +177,7 @@ func (r *VpcReconciler) vpcReconcile(vpc *networkv1alpha1.Vpc) error {
 	}
 	//get resource from tencent cloud, and resource not marked as deleted, update status
 	if !strings.EqualFold(*vpc.Status.ResourceStatus.Code, "") || !strings.EqualFold(*vpc.Status.ResourceStatus.Reason, "") || !strings.EqualFold(*vpc.Status.ResourceStatus.Status, "READY") {
-		vpc.Status.VpcId = tencentVpc.VpcId
+		vpc.Status.VpcID = tencentVpc.VpcId
 		*vpc.Status.ResourceStatus.RetryCount = 0
 		*vpc.Status.ResourceStatus.LastRetry = ""
 		*vpc.Status.ResourceStatus.Code = ""
@@ -195,7 +194,7 @@ func (r *VpcReconciler) createVpc(vpc *networkv1alpha1.Vpc) error {
 	request.VpcName = vpc.Spec.VpcName
 	request.CidrBlock = vpc.Spec.CidrBlock
 	request.EnableMulticast = vpc.Spec.EnableMulticast
-	request.DnsServers = vpc.Spec.DnsServers
+	request.DnsServers = vpc.Spec.DNSServers
 	request.DomainName = vpc.Spec.DomainName
 	for _, tag := range vpc.Spec.Tags {
 		request.Tags = append(request.Tags, &tcvpc.Tag{
@@ -207,40 +206,40 @@ func (r *VpcReconciler) createVpc(vpc *networkv1alpha1.Vpc) error {
 	if err != nil {
 		return err
 	}
-	vpc.Status.VpcId = resp.Response.Vpc.VpcId
+	vpc.Status.VpcID = resp.Response.Vpc.VpcId
 	*vpc.Status.ResourceStatus.Status = "READY"
 	return r.Update(context.TODO(), vpc)
 }
 
 func (r *VpcReconciler) getVpc(vpc *networkv1alpha1.Vpc) (*tcvpc.Vpc, error) {
-	if vpc.Status.VpcId == nil || *vpc.Status.VpcId == "" {
+	if vpc.Status.VpcID == nil || *vpc.Status.VpcID == "" {
 		return nil, errors.NewBadRequest("vpc id not found")
 	}
 	tencentClient, _ := tcvpc.NewClient(common.GerCredential(), *vpc.Spec.Region, profile.NewClientProfile())
 	request := tcvpc.NewDescribeVpcsRequest()
-	request.VpcIds = append(request.VpcIds, vpc.Status.VpcId)
+	request.VpcIds = append(request.VpcIds, vpc.Status.VpcID)
 	resp, err := tencentClient.DescribeVpcs(request)
 	if err != nil {
-		log.Println("failed to get vpc from tencent cloud, requeue")
+		r.Log.Info("failed to get vpc from tencent cloud, requeue")
 		return nil, err
 	}
 	if *resp.Response.TotalCount == 0 {
-		log.Println("Resource is deleted from cloud")
+		r.Log.Info("Resource is deleted from cloud")
 		return nil, nil
 	}
 	return resp.Response.VpcSet[0], nil
 }
 
 func (r *VpcReconciler) deleteVpc(vpc *networkv1alpha1.Vpc) error {
-	if vpc.Status.VpcId == nil || *vpc.Status.VpcId == "" {
+	if vpc.Status.VpcID == nil || *vpc.Status.VpcID == "" {
 		return nil
 	}
 	tencentClient, _ := tcvpc.NewClient(common.GerCredential(), *vpc.Spec.Region, profile.NewClientProfile())
 	request := tcvpc.NewDeleteVpcRequest()
-	request.VpcId = vpc.Status.VpcId
+	request.VpcId = vpc.Status.VpcID
 	_, err := tencentClient.DeleteVpc(request)
 	if err != nil {
-		log.Println("failed to delete vpc from tencent cloud, requeue")
+		r.Log.Info("failed to delete vpc from tencent cloud, requeue")
 		return err
 	}
 	return nil
@@ -249,19 +248,17 @@ func (r *VpcReconciler) deleteVpc(vpc *networkv1alpha1.Vpc) error {
 func ignoreUpdatePredicate() predicate.Predicate {
 	return predicate.Funcs{
 		UpdateFunc: func(e event.UpdateEvent) bool {
-			log.Println("update event")
-			log.Println("old meta:", e.MetaOld.GetGeneration(), "new meta:", e.MetaNew.GetGeneration())
 			// Ignore updates to CR status in which case metadata.Generation does not change
 			return e.MetaOld.GetGeneration() != e.MetaNew.GetGeneration()
 		},
 		DeleteFunc: func(e event.DeleteEvent) bool {
-			log.Println("delete event")
 			// Evaluates to false if the object has been confirmed deleted.
 			return !e.DeleteStateUnknown
 		},
 	}
 }
 
+//SetupWithManager setup controller with manager
 func (r *VpcReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&networkv1alpha1.Vpc{}).

@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	tctke "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20180525"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	networkv1alpha1 "tencent-cloud-operator/apis/network/v1alpha1"
 	"tencent-cloud-operator/internal/common"
 )
@@ -41,10 +42,10 @@ type ManagedClusterStatus struct {
 	Cluster        *tctke.Cluster         `json:"cluster,omitempty"`
 }
 
+// ManagedCluster is the Schema for the managedclusters API
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="ClusterId",type=string,JSONPath=`.status.cluster.ClusterId`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.resourceStatus.status`
-// ManagedCluster is the Schema for the managedclusters API
 type ManagedCluster struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -53,9 +54,8 @@ type ManagedCluster struct {
 	Status ManagedClusterStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // ManagedClusterList contains a list of ManagedCluster
+// +kubebuilder:object:root=true
 type ManagedClusterList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
