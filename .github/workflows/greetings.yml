@@ -20,5 +20,6 @@ jobs:
         with:
           python-version: 3.8.10
       - run: python --version
+      - uses: kubecooler/kube-cooler-tool-setup@v0.0.1
       - run: ./setup.sh
       - run: workflow/incremental-pre-commit.sh
