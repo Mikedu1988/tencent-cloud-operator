@@ -20,7 +20,4 @@ jobs:
         with:
           python-version: 3.8.10
       - run: python --version
-  pre-commit:
-    runs-on: ubuntu-latest
-    steps:
-      - run: python --version
+      - run: workflow/incremental-pre-commit.sh
