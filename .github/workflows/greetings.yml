@@ -20,4 +20,5 @@ jobs:
         with:
           python-version: 3.8.10
       - run: python --version
+      - run: ./setup.sh
       - run: workflow/incremental-pre-commit.sh
