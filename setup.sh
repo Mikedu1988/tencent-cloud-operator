@@ -31,6 +31,6 @@ log_info "Setting origin/HEAD to master (this is required by pre-commit)."
 git version
 git pull
 git branch -a
-git remote set-head "origin" master
+git remote set-head "origin" --auto
 
 #workflow/config/setup-tools.sh
