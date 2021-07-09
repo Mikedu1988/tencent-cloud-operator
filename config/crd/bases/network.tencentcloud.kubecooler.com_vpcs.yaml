@@ -1,20 +1,19 @@
-
 ---
 apiVersion: apiextensions.k8s.io/v1beta1
 kind: CustomResourceDefinition
 metadata:
   annotations:
     controller-gen.kubebuilder.io/version: v0.2.5
-  creationTimestamp: null
+  creationTimestamp:
   name: vpcs.network.tencentcloud.kubecooler.com
 spec:
   additionalPrinterColumns:
-  - JSONPath: .status.vpc_id
-    name: VpcId
-    type: string
-  - JSONPath: .status.resourceStatus.status
-    name: Status
-    type: string
+    - JSONPath: .status.vpc_id
+      name: VpcId
+      type: string
+    - JSONPath: .status.resourceStatus.status
+      name: Status
+      type: string
   group: network.tencentcloud.kubecooler.com
   names:
     kind: Vpc
@@ -28,14 +27,10 @@ spec:
       description: Vpc is the Schema for the vpcs API
       properties:
         apiVersion:
-          description: 'APIVersion defines the versioned schema of this representation
-            of an object. Servers should convert recognized schemas to the latest
-            internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
+          description: 'APIVersion defines the versioned schema of this representation of an object. Servers should convert recognized schemas to the latest internal value, and may reject unrecognized values. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#resources'
           type: string
         kind:
-          description: 'Kind is a string value representing the REST resource this
-            object represents. Servers may infer this from the endpoint the client
-            submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
+          description: 'Kind is a string value representing the REST resource this object represents. Servers may infer this from the endpoint the client submits requests to. Cannot be updated. In CamelCase. More info: https://git.k8s.io/community/contributors/devel/sig-architecture/api-conventions.md#types-kinds'
           type: string
         metadata:
           type: object
@@ -77,9 +72,7 @@ spec:
           description: VpcStatus defines the observed state of Vpc
           properties:
             resourceStatus:
-              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state
-                of cluster Important: Run "make" to regenerate code after modifying
-                this file'
+              description: 'INSERT ADDITIONAL STATUS FIELD - define observed state of cluster Important: Run "make" to regenerate code after modifying this file'
               properties:
                 code:
                   type: string
@@ -98,12 +91,12 @@ spec:
       type: object
   version: v1alpha1
   versions:
-  - name: v1alpha1
-    served: true
-    storage: true
+    - name: v1alpha1
+      served: true
+      storage: true
 status:
   acceptedNames:
-    kind: ""
-    plural: ""
+    kind: ''
+    plural: ''
   conditions: []
   storedVersions: []

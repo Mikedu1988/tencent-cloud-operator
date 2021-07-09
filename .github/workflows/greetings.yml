@@ -1,7 +1,7 @@
 ---
 name: Greetings
 
-on: [pull_request, issues]
+on: push
 
 jobs:
   greeting:
@@ -12,3 +12,16 @@ jobs:
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           issue-message: 'Thanks for your issue, we will look into thi issue '
           pr-message: Thanks for your pr, we will look into thi pr
+  config-node:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.8.10
+      - run: python --version
+      - uses: kubecooler/kube-cooler-tool-setup@v0.0.1
+      - run: ./setup.sh
+      - run: workflow/incremental-pre-commit.sh

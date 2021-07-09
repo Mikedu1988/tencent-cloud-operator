@@ -20,22 +20,24 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
+	"reflect"
+	"strings"
+	"time"
+
+	networkv1alpha1 "tencent-cloud-operator/apis/network/v1alpha1"
+	"tencent-cloud-operator/internal/common"
+	"tencent-cloud-operator/internal/utils"
+
+	log "github.com/sirupsen/logrus"
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	tctke "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20180525"
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"log"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
-	networkv1alpha1 "tencent-cloud-operator/apis/network/v1alpha1"
-	"tencent-cloud-operator/internal/common"
-	"tencent-cloud-operator/internal/utils"
-	"time"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -46,31 +48,31 @@ import (
 // NodePoolReconciler reconciles a NodePool object
 type NodePoolReconciler struct {
 	client.Client
-	Log    logr.Logger
+	Log    *log.Logger
 	Scheme *runtime.Scheme
 }
 
+//Reconcile start reconcile loop
 // +kubebuilder:rbac:groups=compute.tencentcloud.kubecooler.com,resources=nodepools,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=compute.tencentcloud.kubecooler.com,resources=nodepools/status,verbs=get;update;patch
-
 func (r *NodePoolReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	_ = r.Log.WithValues("nodepool", req.NamespacedName)
+	r.Log.Info("nodepool", req.NamespacedName)
 
 	// your logic here
 	nodePool := &computev1alpha1.NodePool{}
 	err := r.Get(ctx, req.NamespacedName, nodePool)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Printf("Request object not found, could have been deleted after reconcile request.")
+			r.Log.Infof("Request object not found, could have been deleted after reconcile request.")
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		log.Println("error reading the object, requeue")
+		r.Log.Info("error reading the object, requeue")
 		return ctrl.Result{}, err
 	}
-	log.Println("found the cluster", *nodePool.Spec.Name)
+	r.Log.Info("found the cluster", *nodePool.Spec.Name)
 	if nodePool.Status.ResourceStatus == nil {
 		nodePool.Status.ResourceStatus = new(common.ResourceStatus)
 		nodePool.Status.ResourceStatus.Status = new(string)
@@ -100,7 +102,7 @@ func (r *NodePoolReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		*nodePool.Status.ResourceStatus.Status = "ERROR"
 		*nodePool.Status.ResourceStatus.LastRetry = time.Now().Format("2006-01-02T15:04:05")
-		*nodePool.Status.ResourceStatus.RetryCount += 1
+		*nodePool.Status.ResourceStatus.RetryCount++
 		if cloudError, ok := err.(*tcerrors.TencentCloudSDKError); ok {
 			*nodePool.Status.ResourceStatus.Code = cloudError.Code
 			*nodePool.Status.ResourceStatus.Reason = cloudError.Message
@@ -117,7 +119,7 @@ func (r *NodePoolReconciler) nodePoolReconcile(nodePool *computev1alpha1.NodePoo
 	pendingFinalizers := nodePool.GetFinalizers()
 	finalizerExists := len(pendingFinalizers) > 0
 	if !finalizerExists && !deleted && !utils.Contains(pendingFinalizers, common.Finalizer) {
-		log.Println("Adding finalized &s to resource", common.Finalizer)
+		r.Log.Info("Adding finalized &s to resource", common.Finalizer)
 		finalizers := append(pendingFinalizers, common.Finalizer)
 		nodePool.SetFinalizers(finalizers)
 		err := r.Update(context.TODO(), nodePool)
@@ -135,11 +137,11 @@ func (r *NodePoolReconciler) nodePoolReconcile(nodePool *computev1alpha1.NodePoo
 	if strings.EqualFold(*nodePool.Status.ResourceStatus.Status, "PROCESSING") {
 		return r.createNodePool(nodePool)
 	}
-	log.Printf("nodePool %s is in %s status", *nodePool.Spec.Name, *nodePool.Status.ResourceStatus.Status)
+	r.Log.Infof("nodePool %s is in %s status", *nodePool.Spec.Name, *nodePool.Status.ResourceStatus.Status)
 
 	tencentNodePool, err := r.getNodePool(nodePool)
 	if err != nil && !deleted {
-		log.Printf("error retrive nodepool %s status from tencent cloud, just requeue for retry", *nodePool.Spec.Name)
+		r.Log.Infof("error retrieve nodepool %s status from tencent cloud, just requeue for retry", *nodePool.Spec.Name)
 		return err
 	}
 	if deleted {
@@ -168,19 +170,19 @@ func (r *NodePoolReconciler) nodePoolReconcile(nodePool *computev1alpha1.NodePoo
 		return r.Update(context.TODO(), nodePool)
 	}
 	if strings.EqualFold(*nodePool.Status.ResourceStatus.Status, "PENDING") || strings.EqualFold(*nodePool.Status.ResourceStatus.Status, "ERROR") {
-		log.Printf("nodePool %s is %s in  status, retry", *nodePool.Spec.Name, *nodePool.Status.ResourceStatus.Status)
+		r.Log.Infof("nodePool %s is %s in  status, retry", *nodePool.Spec.Name, *nodePool.Status.ResourceStatus.Status)
 		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *nodePool.Status.ResourceStatus.LastRetry)
 		//only retry 10 times, only retry every 1 minute
 		if *nodePool.Status.ResourceStatus.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
 			if nodePool.Status.Cluster.ClusterId == nil || *nodePool.Status.Cluster.ClusterId == "" {
-				log.Printf("nodePool %s is in %s status, retry create", *nodePool.Spec.Name, *nodePool.Status.ResourceStatus.Status)
+				r.Log.Infof("nodePool %s is in %s status, retry create", *nodePool.Spec.Name, *nodePool.Status.ResourceStatus.Status)
 				return r.createNodePool(nodePool)
 			}
 		}
 	}
 	//update the status
 	if !reflect.DeepEqual(nodePool.Status.NodePool, tencentNodePool) {
-		log.Println("nodePool not deep equal")
+		r.Log.Info("nodePool not deep equal")
 		nodePool.Status.NodePool = tencentNodePool
 		//the status could be null
 		if tencentNodePool.AutoscalingGroupStatus == nil {
@@ -194,6 +196,7 @@ func (r *NodePoolReconciler) nodePoolReconcile(nodePool *computev1alpha1.NodePoo
 		*nodePool.Status.ResourceStatus.Reason = ""
 		return r.Update(context.TODO(), nodePool)
 	}
+	os.LookupEnv("123")
 	return nil
 }
 
@@ -252,16 +255,16 @@ func (r *NodePoolReconciler) createNodePool(nodePool *computev1alpha1.NodePool) 
 	request.InstanceAdvancedSettings = new(tctke.InstanceAdvancedSettings)
 	resp, err := tencentClient.CreateClusterNodePool(request)
 	if err != nil {
-		log.Println("error create tencent cloud Managed cluster node pool, err:", err)
+		r.Log.Info("error create tencent cloud Managed cluster node pool, err:", err)
 		return err
 	}
 	nodePool.Status.NodePool.NodePoolId = resp.Response.NodePoolId
 	nodePool.Status.Cluster.ClusterId = cluster.Status.Cluster.ClusterId
-	nodePool.Status.Vpc.VpcId = vpc.Status.VpcId
+	nodePool.Status.Vpc.VpcId = vpc.Status.VpcID
 	*nodePool.Status.ResourceStatus.Status = "CREATING"
 	err = r.Update(context.TODO(), nodePool)
 	if err != nil {
-		log.Println("error update managedCluster status")
+		r.Log.Info("error update managedCluster status")
 		return err
 	}
 	return nil
@@ -280,7 +283,7 @@ func (r *NodePoolReconciler) getNodePool(nodePool *computev1alpha1.NodePool) (*t
 	if err != nil {
 		//TODO: update error handling when tencect cloud have clear error for this scenario
 		if cloudError, ok := err.(*tcerrors.TencentCloudSDKError); ok && (strings.Contains(cloudError.Message, "[E501001 DBRecordNotFound] record not found") || strings.Contains(cloudError.Message, "GET_CLUSTER_INFO_ERROR")) {
-			log.Println("node pool deleted from cloud, ignore this error")
+			r.Log.Info("node pool deleted from cloud, ignore this error")
 			return nil, nil
 		}
 		return nil, err
@@ -317,7 +320,7 @@ func (r *NodePoolReconciler) getConfigPraStr(nodePool *computev1alpha1.NodePool)
 		return nil, nil, &common.ReferencedResourceNotReady{Message: fmt.Sprintf("can't find vpc ref in namespace %s, vpc name: %s", nodePool.Namespace, *nodePool.Spec.VpcRef.Name)}
 	}
 	autoScaleConfig := nodePool.Spec.AutoScalingConfig.DeepCopy()
-	autoScaleConfig.VpcId = vpc.Status.VpcId
+	autoScaleConfig.VpcID = vpc.Status.VpcID
 	for _, subnetRef := range nodePool.Spec.AutoScalingConfig.SubnetRef {
 		subnetRequest := types.NamespacedName{
 			Name:      *subnetRef.Name,
@@ -335,7 +338,7 @@ func (r *NodePoolReconciler) getConfigPraStr(nodePool *computev1alpha1.NodePool)
 		autoScaleConfig.SubnetIds = append(autoScaleConfig.SubnetIds, subnet.Status.Subnet.SubnetId)
 	}
 	autoScaleConfig.SubnetRef = nil
-	autoScaleParaStr, err := json.Marshal(autoScaleConfig)
+	autoScaleParaStr, _ := json.Marshal(autoScaleConfig)
 	launchConfig := nodePool.Spec.LaunchConfig.DeepCopy()
 	for _, securityGroupRef := range nodePool.Spec.LaunchConfig.SecurityGroupRef {
 		securityGroupRequest := types.NamespacedName{
@@ -354,7 +357,7 @@ func (r *NodePoolReconciler) getConfigPraStr(nodePool *computev1alpha1.NodePool)
 		launchConfig.SecurityGroupIds = append(launchConfig.SecurityGroupIds, securityGroup.Status.SecurityGroupStatus.SecurityGroupId)
 	}
 	launchConfig.SecurityGroupRef = nil
-	launchConfigParaStr, err := json.Marshal(launchConfig)
+	launchConfigParaStr, _ := json.Marshal(launchConfig)
 	autoScaleGroupPara = new(string)
 	launchConfigPara = new(string)
 	*autoScaleGroupPara = string(autoScaleParaStr)
@@ -362,6 +365,7 @@ func (r *NodePoolReconciler) getConfigPraStr(nodePool *computev1alpha1.NodePool)
 	return autoScaleGroupPara, launchConfigPara, nil
 }
 
+//SetupWithManager setup controller with manager
 func (r *NodePoolReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&computev1alpha1.NodePool{}).

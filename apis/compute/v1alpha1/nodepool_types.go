@@ -21,6 +21,7 @@ import (
 	tctke "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20180525"
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"tencent-cloud-operator/internal/common"
 )
 
@@ -44,6 +45,7 @@ type NodePoolSpec struct {
 	Taints            []*tctke.Taint    `json:"taints,omitempty"`
 }
 
+// AutoScalingGroup autoScalingGroup is a group of kubernetes node
 type AutoScalingGroup struct {
 	DesiredCapacity *int           `json:"DesiredCapacity,omitempty"`
 	MaxSize         *int           `json:"MaxSize,omitempty"`
@@ -51,9 +53,10 @@ type AutoScalingGroup struct {
 	SubnetRef       []*ResourceRef `json:"SubnetRef,omitempty"`
 	RetryPolicy     *string        `json:"RetryPolicy,omitempty"`
 	SubnetIds       []*string      `json:"SubnetIds,omitempty"`
-	VpcId           *string        `json:"VpcId,omitempty"`
+	VpcID           *string        `json:"VpcId,omitempty"`
 }
 
+// LaunchConfig launchConfig for tencent cloud node pool
 type LaunchConfig struct {
 	InstanceType       *string                   `json:"InstanceType,omitempty"`
 	SystemDisk         *tccvm.SystemDisk         `json:"SystemDisk,omitempty"`
@@ -65,7 +68,7 @@ type LaunchConfig struct {
 	EnhancedService    *tccvm.EnhancedService    `json:"EnhancedService,omitempty"`
 }
 
-//ResourceRef defines the resource ref, not allow to refer from another namespace
+// ResourceRef defines the resource ref, not allow to refer from another namespace
 type ResourceRef struct {
 	Name *string `json:"name,omitempty"`
 }
@@ -80,13 +83,13 @@ type NodePoolStatus struct {
 	Vpc            *tcvpc.Vpc             `json:"vpc,omitempty"`
 }
 
+// NodePool is the Schema for the nodepools API
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="NodePool_Name",type=string,JSONPath=`.status.nodePool.Name`
 // +kubebuilder:printcolumn:name="Node_Type",type=string,JSONPath=`.spec.launchConfig.InstanceType`
 // +kubebuilder:printcolumn:name="Desired_Nodes",type=string,JSONPath=`.status.nodePool.DesiredNodesNum`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.resourceStatus.status`
 // +kubebuilder:printcolumn:name="Taints",type=string,JSONPath=`.spec.taints`
-// NodePool is the Schema for the nodepools API
 type NodePool struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -95,9 +98,8 @@ type NodePool struct {
 	Status NodePoolStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // NodePoolList contains a list of NodePool
+// +kubebuilder:object:root=true
 type NodePoolList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

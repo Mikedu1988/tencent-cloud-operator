@@ -19,11 +19,13 @@ package controllers
 import (
 	"context"
 	"fmt"
-	"log"
 	"strings"
+	"time"
+
 	"tencent-cloud-operator/internal/common"
 	"tencent-cloud-operator/internal/utils"
-	"time"
+
+	log "github.com/sirupsen/logrus"
 
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
@@ -32,7 +34,6 @@ import (
 	"k8s.io/apimachinery/pkg/types"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -43,32 +44,32 @@ import (
 // SubnetReconciler reconciles a Subnet object
 type SubnetReconciler struct {
 	client.Client
-	Log    logr.Logger
+	Log    *log.Logger
 	Scheme *runtime.Scheme
 }
 
+//Reconcile start reconcile loop
 // +kubebuilder:rbac:groups=network.tencentcloud.kubecooler.com,resources=subnets,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=network.tencentcloud.kubecooler.com,resources=subnets/status,verbs=get;update;patch
-
 func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	_ = context.Background()
-	_ = r.Log.WithValues("subnet", req.NamespacedName)
+	r.Log.Info("subnet", req.NamespacedName)
 	ctx := context.TODO()
 	// your logic here
 	subnet := &networkv1alpha1.Subnet{}
 	err := r.Get(ctx, req.NamespacedName, subnet)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Printf("Request object not found, could have been deleted after reconcile request.")
+			r.Log.Infof("Request object not found, could have been deleted after reconcile request.")
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		log.Println("error reading the object, requeue")
+		r.Log.Info("error reading the object, requeue")
 		return ctrl.Result{}, err
 	}
 
-	log.Println("found the subnet", *subnet.Spec.Subnet.SubnetName)
+	r.Log.Info("found the subnet", *subnet.Spec.Subnet.SubnetName)
 	if subnet.Status.ResourceStatus == nil {
 		subnet.Status.ResourceStatus = new(common.ResourceStatus)
 		subnet.Status.ResourceStatus.Status = new(string)
@@ -94,7 +95,7 @@ func (r *SubnetReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 		}
 		*subnet.Status.ResourceStatus.Status = "ERROR"
 		*subnet.Status.ResourceStatus.LastRetry = time.Now().UTC().Format("2006-01-02T15:04:05")
-		*subnet.Status.ResourceStatus.RetryCount += 1
+		*subnet.Status.ResourceStatus.RetryCount++
 		if cloudError, ok := err.(*tcerrors.TencentCloudSDKError); ok {
 			*subnet.Status.ResourceStatus.Code = cloudError.Code
 			*subnet.Status.ResourceStatus.Reason = cloudError.Message
@@ -111,7 +112,7 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 	pendingFinalizers := subnet.GetFinalizers()
 	finalizerExists := len(pendingFinalizers) > 0
 	if !finalizerExists && !deleted && !utils.Contains(pendingFinalizers, common.Finalizer) {
-		log.Println("Adding finalized &s to resource", common.Finalizer)
+		r.Log.Info("Adding finalized &s to resource", common.Finalizer)
 		finalizers := append(pendingFinalizers, common.Finalizer)
 		subnet.SetFinalizers(finalizers)
 		err := r.Update(context.TODO(), subnet)
@@ -127,11 +128,11 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 	if *subnet.Status.ResourceStatus.Status == "PROCESSING" {
 		return r.createSubnet(subnet)
 	}
-	log.Printf("subnet %s is in %s status", *subnet.Spec.Subnet.SubnetName, *subnet.Status.ResourceStatus.Status)
+	r.Log.Infof("subnet %s is in %s status", *subnet.Spec.Subnet.SubnetName, *subnet.Status.ResourceStatus.Status)
 	tencentSubnet, err := r.getSubnet(subnet)
 	// err get resource from cloud, and resource not marked as deleted, something wrong
 	if err != nil {
-		log.Printf("error retrive subnet %s status from tencent cloud, just requeue for retry", *subnet.Spec.Subnet.SubnetName)
+		r.Log.Infof("error retrieve subnet %s status from tencent cloud, just requeue for retry", *subnet.Spec.Subnet.SubnetName)
 		return err
 	}
 	if deleted {
@@ -162,10 +163,10 @@ func (r *SubnetReconciler) subnetReconcile(subnet *networkv1alpha1.Subnet) error
 	//resource not marked as deleted, and in PENDING, ERROR status
 	if strings.EqualFold(*subnet.Status.ResourceStatus.Status, "PENDING") || strings.EqualFold(*subnet.Status.ResourceStatus.Status, "ERROR") {
 		lastRetried, _ := time.Parse("2006-01-02T15:04:05", *subnet.Status.ResourceStatus.LastRetry)
-		log.Println("time since:",time.Since(lastRetried))
+		r.Log.Info("time since:", time.Since(lastRetried))
 		//only retry 10 times, only retry every 1 minute
 		if *subnet.Status.ResourceStatus.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
-			log.Printf("subnet %s is in  status, retry", *subnet.Spec.Subnet.SubnetName)
+			r.Log.Infof("subnet %s is in  status, retry", *subnet.Spec.Subnet.SubnetName)
 			if subnet.Status.Subnet.SubnetId == nil || *subnet.Status.Subnet.SubnetId == "" {
 				return r.createSubnet(subnet)
 			}
@@ -220,14 +221,14 @@ func (r *SubnetReconciler) createSubnet(subnet *networkv1alpha1.Subnet) error {
 				Message: fmt.Sprintf("referenced vpc is not in READY status. namespace %s, vpcname: %s, vpc status: %s", subnet.Namespace, *subnet.Spec.VpcRef.Name, *vpc.Status.ResourceStatus.Status),
 			}
 		}
-		request.VpcId = vpc.Status.VpcId
+		request.VpcId = vpc.Status.VpcID
 	} else {
 		request.VpcId = subnet.Spec.Subnet.VpcId
 	}
-	log.Println("request:", request.ToJsonString())
+	r.Log.Info("request:", request.ToJsonString())
 	resp, err := tencentClient.CreateSubnet(request)
 	if err != nil {
-		log.Println("error create tencent cloud subnet, err:", err)
+		r.Log.Info("error create tencent cloud subnet, err:", err)
 		return err
 	}
 	subnet.Status.Subnet.SubnetId = resp.Response.Subnet.SubnetId
@@ -239,7 +240,7 @@ func (r *SubnetReconciler) createSubnet(subnet *networkv1alpha1.Subnet) error {
 	subnet.Status.Vpc.VpcId = resp.Response.Subnet.VpcId
 	err = r.Update(context.TODO(), subnet)
 	if err != nil {
-		log.Println("error update vpc status")
+		r.Log.Info("error update vpc status")
 		return err
 	}
 	return nil
@@ -255,11 +256,11 @@ func (r *SubnetReconciler) getSubnet(subnet *networkv1alpha1.Subnet) (*tcvpc.Sub
 	request.SubnetIds = append(request.SubnetIds, subnet.Status.Subnet.SubnetId)
 	resp, err := tencentClient.DescribeSubnets(request)
 	if err != nil {
-		log.Println("failed to get subnet from tencent cloud, requeue")
+		r.Log.Info("failed to get subnet from tencent cloud, requeue")
 		return nil, err
 	}
 	if *resp.Response.TotalCount == 0 {
-		log.Println("Resource is deleted from cloud, update status")
+		r.Log.Info("Resource is deleted from cloud, update status")
 		return nil, nil
 	}
 	return resp.Response.SubnetSet[0], nil
@@ -274,12 +275,13 @@ func (r *SubnetReconciler) deleteSubnet(subnet *networkv1alpha1.Subnet) error {
 	request.SubnetId = subnet.Status.Subnet.SubnetId
 	_, err := tencentClient.DeleteSubnet(request)
 	if err != nil {
-		log.Println("failed to delete subnet from tencent cloud, requeue")
+		r.Log.Info("failed to delete subnet from tencent cloud, requeue")
 		return err
 	}
 	return nil
 }
 
+//SetupWithManager setup controller with manager
 func (r *SubnetReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&networkv1alpha1.Subnet{}).

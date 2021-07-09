@@ -18,6 +18,7 @@ package v1alpha1
 
 import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"tencent-cloud-operator/internal/common"
 )
 
@@ -38,8 +39,8 @@ type VpcSpec struct {
 	// Multicast, true or false
 	EnableMulticast *string `json:"enableMulticast,omitempty"`
 
-	// DnsServers address, support up to 4 dns servers。
-	DnsServers []*string `json:"dnsServers,omitempty"`
+	// DNSServers address, support up to 4 dns servers。
+	DNSServers []*string `json:"dnsServers,omitempty"`
 
 	// DomainName。
 	DomainName *string `json:"domainName,omitempty"`
@@ -51,6 +52,7 @@ type VpcSpec struct {
 	Tags []Tag `json:"tags,omitempty"`
 }
 
+// Tag tag
 type Tag struct {
 	Key   *string `json:"key,omitempty"`
 	Value *string `json:"value,omitempty"`
@@ -61,13 +63,13 @@ type VpcStatus struct {
 	// INSERT ADDITIONAL STATUS FIELD - define observed state of cluster
 	// Important: Run "make" to regenerate code after modifying this file
 	ResourceStatus *common.ResourceStatus `json:"resourceStatus,omitempty"`
-	VpcId          *string                `json:"vpc_id,omitempty"`
+	VpcID          *string                `json:"vpc_id,omitempty"`
 }
 
+//Vpc is the Schema for the vpcs API
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="VpcId",type=string,JSONPath=`.status.vpc_id`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.resourceStatus.status`
-// Vpc is the Schema for the vpcs API
 type Vpc struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -76,9 +78,8 @@ type Vpc struct {
 	Status VpcStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
-
 // VpcList contains a list of Vpc
+// +kubebuilder:object:root=true
 type VpcList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`
@@ -97,8 +98,8 @@ func (in *VpcStatus) DeepCopyInto(out *VpcStatus) {
 		*out = new(common.ResourceStatus)
 		**out = **in
 	}
-	if in.VpcId != nil {
-		in, out := &in.VpcId, &out.VpcId
+	if in.VpcID != nil {
+		in, out := &in.VpcID, &out.VpcID
 		*out = new(string)
 		**out = **in
 	}

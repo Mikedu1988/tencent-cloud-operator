@@ -19,6 +19,7 @@ package v1alpha1
 import (
 	tcvpc "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/vpc/v20170312"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+
 	"tencent-cloud-operator/internal/common"
 )
 
@@ -45,10 +46,10 @@ type SecurityGroupStatus struct {
 	SecurityGroupPolicySetStatus *tcvpc.SecurityGroupPolicySet `json:"securityGroupPolicySet,omitempty"`
 }
 
+// SecurityGroup is the Schema for the securitygroups API
 // +kubebuilder:object:root=true
 // +kubebuilder:printcolumn:name="SecurityGroupId",type=string,JSONPath=`.status.securityGroup.SecurityGroupId`
 // +kubebuilder:printcolumn:name="Status",type=string,JSONPath=`.status.resourceStatus.status`
-// SecurityGroup is the Schema for the securitygroups API
 type SecurityGroup struct {
 	metav1.TypeMeta   `json:",inline"`
 	metav1.ObjectMeta `json:"metadata,omitempty"`
@@ -57,8 +58,8 @@ type SecurityGroup struct {
 	Status SecurityGroupStatus `json:"status,omitempty"`
 }
 
-// +kubebuilder:object:root=true
 // SecurityGroupList contains a list of SecurityGroup
+// +kubebuilder:object:root=true
 type SecurityGroupList struct {
 	metav1.TypeMeta `json:",inline"`
 	metav1.ListMeta `json:"metadata,omitempty"`

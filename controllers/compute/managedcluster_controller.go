@@ -19,21 +19,22 @@ package controllers
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"strings"
+	"time"
+
+	networkv1alpha1 "tencent-cloud-operator/apis/network/v1alpha1"
+	"tencent-cloud-operator/internal/common"
+	"tencent-cloud-operator/internal/utils"
+
+	log "github.com/sirupsen/logrus"
 	tcerrors "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/errors"
 	"github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/common/profile"
 	tctke "github.com/tencentcloud/tencentcloud-sdk-go/tencentcloud/tke/v20180525"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/types"
-	"log"
-	"reflect"
 	"sigs.k8s.io/controller-runtime/pkg/reconcile"
-	"strings"
-	networkv1alpha1 "tencent-cloud-operator/apis/network/v1alpha1"
-	"tencent-cloud-operator/internal/common"
-	"tencent-cloud-operator/internal/utils"
-	"time"
 
-	"github.com/go-logr/logr"
 	"k8s.io/apimachinery/pkg/runtime"
 	ctrl "sigs.k8s.io/controller-runtime"
 	"sigs.k8s.io/controller-runtime/pkg/client"
@@ -44,28 +45,28 @@ import (
 // ManagedClusterReconciler reconciles a ManagedCluster object
 type ManagedClusterReconciler struct {
 	client.Client
-	Log    logr.Logger
+	Log    *log.Logger
 	Scheme *runtime.Scheme
 }
 
+//Reconcile start reconcile loop
 // +kubebuilder:rbac:groups=compute.tencentcloud.kubecooler.com,resources=managedclusters,verbs=get;list;watch;create;update;patch;delete
 // +kubebuilder:rbac:groups=compute.tencentcloud.kubecooler.com,resources=managedclusters/status,verbs=get;update;patch
-
 func (r *ManagedClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, error) {
 	ctx := context.Background()
-	_ = r.Log.WithValues("managedcluster", req.NamespacedName)
+	r.Log.Info("managedcluster", req.NamespacedName)
 
 	// your logic here
 	managedCluster := &computev1alpha1.ManagedCluster{}
 	err := r.Get(ctx, req.NamespacedName, managedCluster)
 	if err != nil {
 		if errors.IsNotFound(err) {
-			log.Printf("Request object not found, could have been deleted after reconcile request.")
+			r.Log.Infof("Request object not found, could have been deleted after reconcile request.")
 			// Owned objects are automatically garbage collected. For additional cleanup logic use finalizers.
 			// Return and don't requeue
 			return reconcile.Result{}, nil
 		}
-		log.Println("error reading the object, requeue")
+		r.Log.Info("error reading the object, requeue")
 		return ctrl.Result{}, err
 	}
 	if managedCluster.Status.ResourceStatus == nil {
@@ -79,7 +80,7 @@ func (r *ManagedClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 	if managedCluster.Status.Cluster == nil {
 		managedCluster.Status.Cluster = new(tctke.Cluster)
 	}
-	log.Println("found the cluster", *managedCluster.Spec.Cluster.ClusterName)
+	r.Log.Info("found the cluster", *managedCluster.Spec.Cluster.ClusterName)
 	err = r.managedClusterReconcile(managedCluster)
 	if err != nil {
 		*managedCluster.Status.ResourceStatus.Status = "ERROR"
@@ -92,7 +93,7 @@ func (r *ManagedClusterReconciler) Reconcile(req ctrl.Request) (ctrl.Result, err
 		}
 		err = r.Update(context.Background(), managedCluster)
 		if err != nil {
-			log.Println("error update retry status")
+			r.Log.Info("error update retry status")
 		}
 		return ctrl.Result{RequeueAfter: common.RequeueInterval}, err
 	}
@@ -105,7 +106,7 @@ func (r *ManagedClusterReconciler) managedClusterReconcile(managedCluster *compu
 	pendingFinalizers := managedCluster.GetFinalizers()
 	finalizerExists := len(pendingFinalizers) > 0
 	if !finalizerExists && !deleted && !utils.Contains(pendingFinalizers, common.Finalizer) {
-		log.Println("Adding finalized &s to resource", common.Finalizer)
+		r.Log.Info("Adding finalized &s to resource", common.Finalizer)
 		finalizers := append(pendingFinalizers, common.Finalizer)
 		managedCluster.SetFinalizers(finalizers)
 		err := r.Update(context.TODO(), managedCluster)
@@ -122,12 +123,12 @@ func (r *ManagedClusterReconciler) managedClusterReconcile(managedCluster *compu
 	if strings.EqualFold(*managedCluster.Status.ResourceStatus.Status, "PROCESSING") {
 		return r.createManagedCluster(managedCluster)
 	}
-	log.Printf("managedCluster %s is in %s status", *managedCluster.Spec.Cluster.ClusterName, *managedCluster.Status.ResourceStatus.Status)
+	r.Log.Infof("managedCluster %s is in %s status", *managedCluster.Spec.Cluster.ClusterName, *managedCluster.Status.ResourceStatus.Status)
 
 	tencentManagedCluster, err := r.getManagedCluster(managedCluster)
 	if err != nil {
 		//only report error if resource is not marked as deleted
-		log.Printf("error retrive managedCluster %s status from tencent cloud, just requeue for retry", *managedCluster.Spec.Cluster.ClusterName)
+		r.Log.Infof("error retrieve managedCluster %s status from tencent cloud, just requeue for retry", *managedCluster.Spec.Cluster.ClusterName)
 		return err
 	}
 	if deleted {
@@ -160,13 +161,13 @@ func (r *ManagedClusterReconciler) managedClusterReconcile(managedCluster *compu
 		//only retry 10 times, only retry every 1 minute
 		if *managedCluster.Status.ResourceStatus.RetryCount < 10 && time.Since(lastRetried) > time.Minute {
 			if managedCluster.Status.Cluster.ClusterId == nil || *managedCluster.Status.Cluster.ClusterId == "" {
-				log.Printf("managedCluster %s is in %s status, retry create", *managedCluster.Spec.Cluster.ClusterName, *managedCluster.Status.ResourceStatus.Status)
+				r.Log.Infof("managedCluster %s is in %s status, retry create", *managedCluster.Spec.Cluster.ClusterName, *managedCluster.Status.ResourceStatus.Status)
 				return r.createManagedCluster(managedCluster)
 			}
 		}
 	}
 	if !reflect.DeepEqual(managedCluster.Status.Cluster, tencentManagedCluster) || *managedCluster.Status.ResourceStatus.Status != "RUNNING" {
-		log.Println("managedCluster not deep equal")
+		r.Log.Info("managedCluster not deep equal")
 		managedCluster.Status.Cluster = tencentManagedCluster
 		*managedCluster.Status.ResourceStatus.Status = strings.ToUpper(*tencentManagedCluster.ClusterStatus)
 		*managedCluster.Status.ResourceStatus.RetryCount = 0
@@ -206,17 +207,17 @@ func (r *ManagedClusterReconciler) createManagedCluster(managedCluster *computev
 	request.ClusterCIDRSettings.ClusterCIDR = managedCluster.Spec.Cluster.ClusterNetworkSettings.ClusterCIDR
 	request.ClusterBasicSettings.ClusterVersion = managedCluster.Spec.Cluster.ClusterVersion
 	request.ClusterType = managedCluster.Spec.Cluster.ClusterType
-	request.ClusterBasicSettings.VpcId = vpc.Status.VpcId
+	request.ClusterBasicSettings.VpcId = vpc.Status.VpcID
 	resp, err := tencentClient.CreateCluster(request)
 	if err != nil {
-		log.Println("error create tencent cloud Managed cluster, err:", err)
+		r.Log.Info("error create tencent cloud Managed cluster, err:", err)
 		return err
 	}
 	managedCluster.Status.Cluster.ClusterId = resp.Response.ClusterId
 	*managedCluster.Status.ResourceStatus.Status = "CREATING"
 	err = r.Update(context.TODO(), managedCluster)
 	if err != nil {
-		log.Println("error update managedCluster status")
+		r.Log.Info("error update managedCluster status")
 		return err
 	}
 	return nil
@@ -235,7 +236,7 @@ func (r *ManagedClusterReconciler) getManagedCluster(managedCluster *computev1al
 		return nil, err
 	}
 	if *resp.Response.TotalCount == 0 {
-		log.Println("Resource is deleted from cloud, update status")
+		r.Log.Info("Resource is deleted from cloud, update status")
 		//the resource is not marked as deleted, but deleted in cloud
 		return nil, nil
 	}
@@ -255,6 +256,7 @@ func (r *ManagedClusterReconciler) deleteManagedCluster(managedCluster *computev
 	return nil
 }
 
+//SetupWithManager setup controller with manager
 func (r *ManagedClusterReconciler) SetupWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewControllerManagedBy(mgr).
 		For(&computev1alpha1.ManagedCluster{}).

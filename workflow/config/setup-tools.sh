@@ -4,3 +4,5 @@ source "$(dirname "${BASH_SOURCE[0]}")/../lib/setup.sh" || exit "${EXIT_FAILED_T
 
 # tools setup
 log_info "setup tools..."
+
+# goimports

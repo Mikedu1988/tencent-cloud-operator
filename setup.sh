@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
 # shellcheck source=../lib/setup.sh
 source "$(dirname "${BASH_SOURCE[0]}")/workflow/lib/setup.sh" || exit "${EXIT_FAILED_TO_SOURCE}"
-# install python
-workflow/config/setup-python.sh
 
 log_info "Installing pip and python requirements (pre-commit)."
 pip install --upgrade "pip==21.1.1"
@@ -29,5 +27,10 @@ log_info "Running direnv allow."
 log_action "ACTION REQUIRED: Please inspect .envrc to make sure you understand how your environment is being modified."
 direnv allow
 
+log_info "Setting origin/HEAD to master (this is required by pre-commit)."
+git version
+git pull
+git branch -a
+git remote set-head "origin" --auto
 
-workflow/config/setup-tools.sh
+#workflow/config/setup-tools.sh

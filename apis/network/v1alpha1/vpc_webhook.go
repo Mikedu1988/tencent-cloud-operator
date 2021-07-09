@@ -28,6 +28,7 @@ import (
 // log is for logging in this package.
 var vpclog = logf.Log.WithName("vpc-resource")
 
+//SetupWebhookWithManager set up with manager
 func (r *Vpc) SetupWebhookWithManager(mgr ctrl.Manager) error {
 	return ctrl.NewWebhookManagedBy(mgr).
 		For(r).
@@ -65,7 +66,7 @@ func (r *Vpc) ValidateUpdate(old runtime.Object) error {
 	// TODO(user): fill in your validation logic upon object update.
 	oldVpc := old.(*Vpc)
 	if *r.Spec.CidrBlock != *oldVpc.Spec.CidrBlock {
-		return errors.New("cidr block is immutable!")
+		return errors.New("cidr block is immutable")
 	}
 	// TODO(user): fill in your validation logic upon object update.
 	return nil
