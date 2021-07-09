@@ -28,6 +28,8 @@ log_action "ACTION REQUIRED: Please inspect .envrc to make sure you understand h
 direnv allow
 
 log_info "Setting origin/HEAD to master (this is required by pre-commit)."
+git version
+git branch -a
 git remote set-head "origin" master
 
 #workflow/config/setup-tools.sh
